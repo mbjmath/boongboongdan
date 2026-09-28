@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>월간 일정 관리</title>
+  <style>
+    :root {
+      --primary-color: #2e7d32;
+      --primary-dark: #1b5e20;
+      --bg-color: #f8f9fa;
+      --border-color: #e0e0e0;
+      --text-color: #333333;
+      --sunday-color: #d32f2f;
+      --saturday-color: #1976d2;
+      --weekday-color: #333333;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: #eef2f5;
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    #app-container {
+      width: 100%;
+      max-width: 600px;
+      background-color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      position: relative;
+    }
+
+    /* 헤더 */
+    header {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header-title-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      letter-spacing: -0.5px;
+    }
+
+    .api-status-badge {
+      font-size: 0.72rem;
+      opacity: 0.9;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    select {
+      background: white;
+      color: #333;
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      outline: none;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 0.95rem;
+      font-weight: bold;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+    }
+
+    .btn-add {
+      background-color: #ffffff;
+      color: var(--primary-color);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .btn-add:active { background-color: #f0f0f0; }
+
+    .btn-icon {
+      background-color: rgba(255,255,255,0.2);
+      color: white;
+      padding: 7px 8px;
+    }
+    .btn-icon:hover { background-color: rgba(255,255,255,0.3); }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: white;
+      width: 100%;
+      padding: 12px;
+      font-size: 1.05rem;
+    }
+
+    .btn-secondary {
+      background-color: #757575;
+      color: white;
+    }
+
+    .btn-danger {
+      background-color: #d32f2f;
+      color: white;
+    }
+
+    /* 요일 헤더 */
+    .calendar-days-header {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #f1f3f4;
+      border-bottom: 1px solid var(--border-color);
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.95rem;
+      padding: 10px 0;
+    }
+
+    .day-sun { color: var(--sunday-color); }
+    .day-sat { color: var(--saturday-color); }
+
+    /* 캘린더 메인 Grid */
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: minmax(125px, auto);
+      border-left: 1px solid var(--border-color);
+      border-top: 1px solid var(--border-color);
+      flex-grow: 1;
+      background-color: #ffffff;
+    }
+
+    .calendar-cell {
+      border-right: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 3px;
+      display: flex;
+      flex-direction: column;
+      background-color: white;
+    }
+
+    .calendar-cell.other-month {
+      background-color: #fafafa;
+      opacity: 0.35;
+    }
+
+    .cell-date {
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 2px 0;
+      border-bottom: 1px dashed #efefef;
+    }
+
+    /* 오늘 날짜 원형 배지 스타일 추가 */
+    .cell-date.is-today {
+      background-color: var(--primary-color);
+      color: #ffffff !important;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      line-height: 22px;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .category-container {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-top: 3px;
+      flex-grow: 1;
+    }
+
+    .category-row {
+      display: flex;
+      font-size: 0.78rem;
+      min-height: 22px;
+      line-height: 1.2;
+      align-items: center;
+      padding: 1px 0;
+    }
+
+    .category-label {
+      width: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* 카테고리 아이콘 배지 스타일 */
+    .cat-badge {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+
+    .cat-badge-star { background-color: #16a34a; } /* ☆ (초록) */
+    .cat-badge-mung { background-color: #3b82f6; } /* 멍 (파랑) */
+    .cat-badge-kang { background-color: #ef4444; } /* 캉 (빨강) */
+    .cat-badge-sing { background-color: #eab308; color: #ffffff; } /* 싱 (노랑 - 흰색 글씨) */
+
+    .category-content-list {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      overflow: hidden;
+    }
+
+    .event-item {
+      background-color: #e8f5e9;
+      color: #1b5e20;
+      border-radius: 3px;
+      padding: 2px 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.78rem;
+      border-left: 3px solid var(--primary-color);
+    }
+    .event-item:hover {
+      background-color: #c8e6c9;
+    }
+
+    /* 풀스크린 화면 (입력/수정/상세) */
+    .view-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: white;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .hidden { display: none !important; }
+
+    .screen-header {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .btn-back {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    .screen-body {
+      padding: 20px 16px;
+      flex-grow: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #444;
+    }
+
+    .date-picker-btn {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fdfdfd;
+      text-align: left;
+      font-size: 1.05rem;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #eee;
+    }
+
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.05rem;
+      cursor: pointer;
+    }
+
+    input[type="radio"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary-color);
+    }
+
+    input[type="text"], textarea {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--primary-color);
+    }
+
+    /* 미니 캘린더 Modal */
+    .mini-calendar-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 60;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .mini-calendar-card {
+      background: white;
+      width: 88%;
+      max-width: 340px;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    .mini-cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-weight: bold;
+    }
+
+    .mini-cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      text-align: center;
+    }
+
+    .mini-cal-cell {
+      padding: 8px 0;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-radius: 50%;
+    }
+    .mini-cal-cell:hover { background-color: #f0f0f0; }
+
+    .mini-cal-cell.selected {
+      background-color: var(--primary-color) !important;
+      color: white !important;
+      font-weight: bold;
+    }
+
+    /* 알림/삭제 확인 Modal */
+    .alert-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 70;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .alert-card {
+      background: white;
+      width: 88%;
+      max-width: 320px;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    .alert-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .alert-actions .btn {
+      flex: 1;
+    }
+
+    /* 로더 */
+    #loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.75);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+  <div id="loading-overlay" class="hidden">
+    <div style="font-size: 1.5rem;">⏳</div>
+    <div id="loading-text">처리 중...</div>
+  </div>
+
+  <!-- 상단 헤더 -->
+  <header>
+    <div class="header-title-container">
+      <div class="header-title">월간 일정</div>
+      <div class="api-status-badge" id="api-status-badge">
+        <span id="status-icon">⚪</span> <span id="status-text">연동 필요</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <select id="year-select"></select>
+      <select id="month-select"></select>
+      <button class="btn btn-icon" id="open-config-btn" title="API 설정">⚙️ API</button>
+      <button class="btn btn-add" id="open-add-btn">＋ 일정</button>
+    </div>
+  </header>
+
+  <!-- 캘린더 요일 Bar -->
+  <div class="calendar-days-header">
+    <div class="day-sun">일</div>
+    <div>월</div>
+    <div>화</div>
+    <div>수</div>
+    <div>목</div>
+    <div>금</div>
+    <div class="day-sat">토</div>
+  </div>
+
+  <!-- 캘린더 메인 Grid -->
+  <div class="calendar-grid" id="calendar-grid"></div>
+
+  <!-- API URL 설정 화면 Modal -->
+  <div id="config-modal" class="alert-modal hidden">
+    <div class="alert-card" style="text-align: left; max-width: 380px;">
+      <h3 style="margin-bottom: 12px; font-size: 1.15rem; color: #2e7d32;">⚙️ 구글 시트 연동 설정</h3>
+      <p style="font-size: 0.85rem; color: #666; margin-bottom: 12px; line-height: 1.4;">
+        Google Apps Script 배포 후 생성된 **웹앱 URL**을 아래 입력창에 붙여넣어 주세요.
+      </p>
+      <div class="form-group">
+        <label style="font-size: 0.85rem;">웹앱 URL (https://script.google.com/.../exec)</label>
+        <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/.../exec">
+      </div>
+      <div class="alert-actions">
+        <button class="btn btn-secondary" id="close-config-btn">닫기</button>
+        <button class="btn btn-primary" id="save-config-btn" style="width: auto;">저장 및 연동</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 일정 입력/수정 화면 -->
+  <div id="form-screen" class="view-screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="close-form-btn">←</button>
+      <span id="form-title">일정 입력</span>
+    </div>
+    <div class="screen-body">
+      <div class="form-group">
+        <label>날짜</label>
+        <button class="date-picker-btn" id="selected-date-display">
+          <span id="selected-date-text">2026년 10월 15일</span>
+          <span>📅</span>
+        </button>
+      </div>
+      <div class="form-group">
+        <label>카테고리</label>
+        <div class="radio-group" style="flex-direction: row; justify-content: space-around;">
+          <label class="radio-label">
+            <input type="radio" name="category" value="☆" checked>
+            <span class="cat-badge cat-badge-star">☆</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="category" value="멍">
+            <span class="cat-badge cat-badge-mung">멍</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="category" value="캉">
+            <span class="cat-badge cat-badge-kang">캉</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="category" value="싱">
+            <span class="cat-badge cat-badge-sing">싱</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>일정 내용</label>
+        <textarea id="event-content-input" placeholder="일정 내용을 입력하세요"></textarea>
+      </div>
+      <button class="btn btn-primary" id="save-event-btn" style="margin-top: 10px;">일정 저장</button>
+    </div>
+  </div>
+
+  <!-- 일정 상세 조회 화면 -->
+  <div id="detail-screen" class="view-screen hidden">
+    <div class="screen-header">
+      <button class="btn-back" id="close-detail-btn">←</button>
+      <span>일정 상세</span>
+    </div>
+    <div class="screen-body">
+      <div class="form-group">
+        <label>날짜</label>
+        <div id="detail-date" style="font-size: 1.05rem; padding: 4px 0;"></div>
+      </div>
+      <div class="form-group">
+        <label>카테고리</label>
+        <div id="detail-category" style="display: flex; align-items: center; gap: 6px; font-size: 1.05rem; font-weight: bold;"></div>
+      </div>
+      <div class="form-group">
+        <label>일정 내용</label>
+        <div id="detail-content" style="font-size: 1rem; background: #f8f9fa; padding: 14px; border-radius: 6px; border: 1px solid #eaeeed; min-height: 80px;"></div>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: auto;">
+        <button class="btn btn-primary" id="edit-event-btn" style="flex: 1;">수정</button>
+        <button class="btn btn-danger" id="delete-event-btn" style="flex: 1;">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 작은 캘린더 (Date Picker Modal) -->
+  <div id="mini-cal-modal" class="mini-calendar-modal hidden">
+    <div class="mini-calendar-card">
+      <div class="mini-cal-header">
+        <button class="btn btn-secondary" id="mini-prev-month" style="padding: 4px 10px;">&lt;</button>
+        <span id="mini-cal-title"></span>
+        <button class="btn btn-secondary" id="mini-next-month" style="padding: 4px 10px;">&gt;</button>
+      </div>
+      <div class="mini-cal-grid" id="mini-cal-grid"></div>
+      <button class="btn btn-secondary" id="close-mini-cal" style="width: 100%; margin-top: 14px; padding: 8px;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 삭제 확인 모달 -->
+  <div id="delete-alert-modal" class="alert-modal hidden">
+    <div class="alert-card">
+      <h3 style="margin-bottom: 8px; font-size: 1.1rem;">일정 삭제</h3>
+      <p style="font-size: 0.9rem; color: #666;">이 일정을 삭제하시겠습니까?</p>
+      <div id="delete-preview" style="font-size: 0.9rem; margin: 12px 0; font-weight: bold; color: #d32f2f;"></div>
+      <div class="alert-actions">
+        <button class="btn btn-secondary" id="cancel-delete-btn">취소</button>
+        <button class="btn btn-danger" id="confirm-delete-btn">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 저장된 API URL 로드 또는 기본값 설정
+  let API_URL = localStorage.getItem('GAS_API_URL') || "";
+
+  // 현재 날짜 동적 설정 (접속 시점의 오늘 날짜 기준)
+  const today = new Date();
+  let currentYear = today.getFullYear();
+  let currentMonth = today.getMonth() + 1;
+  let selectedEvent = null;
+  let pickerYear = currentYear;
+  let pickerMonth = currentMonth;
+  let selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const categories = ['☆', '멍', '캉', '싱'];
+
+  // 카테고리별 배지 클래스 및 이콘 설정
+  const catConfig = {
+    '☆': { class: 'cat-badge-star', name: '☆' },
+    '멍': { class: 'cat-badge-mung', name: '멍' },
+    '멍뭉이': { class: 'cat-badge-mung', name: '멍' },
+    '캉': { class: 'cat-badge-kang', name: '캉' },
+    '캉이': { class: 'cat-badge-kang', name: '캉' },
+    '싱': { class: 'cat-badge-sing', name: '싱' },
+    '싱이': { class: 'cat-badge-sing', name: '싱' }
+  };
+
+  function getCatBadgeHtml(cat) {
+    const config = catConfig[cat] || { class: 'cat-badge-star', name: cat ? cat.charAt(0) : '☆' };
+    return `<span class="cat-badge ${config.class}">${config.name}</span>`;
+  }
+
+  // 기본 샘플 데모 데이터 (API 연동 전 표시용)
+  let demoEvents = [
+    { id: "A001", date: "2026-10-15", category: "☆", content: "학교 행사" },
+    { id: "A002", date: "2026-10-15", category: "멍", content: "병원 방문" },
+    { id: "A003", date: "2026-10-18", category: "캉", content: "가족 모임" },
+    { id: "A004", date: "2026-10-20", category: "싱", content: "저녁 약속" }
+  ];
+
+  let eventsData = [...demoEvents];
+
+  // 법정 공휴일 예시 데이터
+  const holidays = {
+    "2026-01-01": "신정",
+    "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴",
+    "2026-03-01": "삼일절", "2026-03-02": "대체공휴일",
+    "2026-05-05": "어린이날", "2026-05-24": "부처님오신날",
+    "2026-06-06": "현충일", "2026-08-15": "광복절",
+    "2026-09-24": "추석 연휴", "2026-09-25": "추석", "2026-09-26": "추석 연휴",
+    "2026-10-03": "개천절", "2026-10-09": "한글날", "2026-12-25": "성탄절"
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initSelects();
+    updateStatusBadge();
+
+    // 저장된 API_URL이 있으면 바로 실시간 시트 데이터 동기화
+    if (API_URL) {
+      fetchEvents();
+    } else {
+      renderCalendar();
+    }
+
+    document.getElementById('year-select').addEventListener('change', (e) => {
+      currentYear = parseInt(e.target.value);
+      if (API_URL) fetchEvents();
+      else renderCalendar();
+    });
+
+    document.getElementById('month-select').addEventListener('change', (e) => {
+      currentMonth = parseInt(e.target.value);
+      if (API_URL) fetchEvents();
+      else renderCalendar();
+    });
+
+    document.getElementById('open-add-btn').addEventListener('click', openAddForm);
+    document.getElementById('close-form-btn').addEventListener('click', () => hide('form-screen'));
+    document.getElementById('close-detail-btn').addEventListener('click', () => hide('detail-screen'));
+    
+    document.getElementById('open-config-btn').addEventListener('click', openConfigModal);
+    document.getElementById('close-config-btn').addEventListener('click', () => hide('config-modal'));
+    document.getElementById('save-config-btn').addEventListener('click', saveApiUrl);
+
+    document.getElementById('selected-date-display').addEventListener('click', openDatePicker);
+    document.getElementById('close-mini-cal').addEventListener('click', () => hide('mini-cal-modal'));
+    document.getElementById('mini-prev-month').addEventListener('click', () => movePickerMonth(-1));
+    document.getElementById('mini-next-month').addEventListener('click', () => movePickerMonth(1));
+
+    document.getElementById('save-event-btn').addEventListener('click', saveEvent);
+    document.getElementById('edit-event-btn').addEventListener('click', openEditForm);
+    document.getElementById('delete-event-btn').addEventListener('click', showDeleteModal);
+    document.getElementById('cancel-delete-btn').addEventListener('click', () => hide('delete-alert-modal'));
+    document.getElementById('confirm-delete-btn').addEventListener('click', confirmDelete);
+  });
+
+  function initSelects() {
+    const yearSelect = document.getElementById('year-select');
+    const monthSelect = document.getElementById('month-select');
+
+    yearSelect.innerHTML = '';
+    monthSelect.innerHTML = '';
+
+    // 현재 연도 기준 ±3년 드롭다운 옵션 생성
+    const startYear = currentYear - 3;
+    const endYear = currentYear + 3;
+
+    for (let y = startYear; y <= endYear; y++) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = `${y}년`;
+      if (y === currentYear) opt.selected = true;
+      yearSelect.appendChild(opt);
+    }
+
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = `${m}월`;
+      if (m === currentMonth) opt.selected = true;
+      monthSelect.appendChild(opt);
+    }
+  }
+
+  function updateStatusBadge() {
+    const icon = document.getElementById('status-icon');
+    const text = document.getElementById('status-text');
+    if (API_URL && API_URL.trim().length > 10) {
+      icon.textContent = '🟢';
+      text.textContent = '구글시트 연동됨';
+    } else {
+      icon.textContent = '⚪';
+      text.textContent = '데모 모드 (연동 필요)';
+    }
+  }
+
+  function openConfigModal() {
+    document.getElementById('api-url-input').value = API_URL;
+    show('config-modal');
+  }
+
+  function saveApiUrl() {
+    const inputVal = document.getElementById('api-url-input').value.trim();
+    API_URL = inputVal;
+    localStorage.setItem('GAS_API_URL', API_URL);
+    hide('config-modal');
+    updateStatusBadge();
+
+    if (API_URL) {
+      showToast('구글 시트 연동을 시도합니다...');
+      fetchEvents();
+    } else {
+      eventsData = [...demoEvents];
+      renderCalendar();
+      showToast('데모 모드로 전환되었습니다.');
+    }
+  }
+
+  function renderCalendar() {
+    const grid = document.getElementById('calendar-grid');
+    grid.innerHTML = '';
+
+    const firstDay = new Date(currentYear, currentMonth - 1, 1);
+    const lastDay = new Date(currentYear, currentMonth, 0);
+
+    const startDayOfWeek = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+    const prevMonthLastDay = new Date(currentYear, currentMonth - 1, 0).getDate();
+
+    // 이전 달 셀
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      const cell = document.createElement('div');
+      cell.className = 'calendar-cell other-month';
+      cell.innerHTML = `<div class="cell-date">${prevMonthLastDay - i}</div>`;
+      grid.appendChild(cell);
+    }
+
+    // 현재 달 셀
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    for (let day = 1; day <= totalDays; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const cellDate = new Date(currentYear, currentMonth - 1, day);
+      const dayOfWeek = cellDate.getDay();
+      const isToday = (dateStr === todayStr);
+
+      const cell = document.createElement('div');
+      cell.className = 'calendar-cell';
+
+      let colorStyle = 'var(--weekday-color)';
+      if (dayOfWeek === 0 || holidays[dateStr]) {
+        colorStyle = 'var(--sunday-color)';
+      } else if (dayOfWeek === 6) {
+        colorStyle = 'var(--saturday-color)';
+      }
+
+      const todayClass = isToday ? 'is-today' : '';
+      let html = `<div class="cell-date ${todayClass}" style="color: ${isToday ? '#ffffff' : colorStyle};">${day}</div>`;
+      html += `<div class="category-container">`;
+
+      categories.forEach(cat => {
+        const catEvents = eventsData.filter(e => e.date === dateStr && (e.category === cat || catConfig[e.category]?.name === cat));
+        html += `<div class="category-row">
+          <div class="category-label">${getCatBadgeHtml(cat)}</div>
+          <div class="category-content-list">`;
+        
+        catEvents.forEach(ev => {
+          html += `<div class="event-item" onclick="openDetail('${ev.id}')">${escapeHtml(ev.content)}</div>`;
+        });
+
+        html += `</div></div>`;
+      });
+
+      html += `</div>`;
+      cell.innerHTML = html;
+      grid.appendChild(cell);
+    }
+
+    // 다음 달 셀
+    const filledCells = startDayOfWeek + totalDays;
+    const remainingCells = (42 - filledCells) % 7;
+    for (let i = 1; i <= remainingCells; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'calendar-cell other-month';
+      cell.innerHTML = `<div class="cell-date">${i}</div>`;
+      grid.appendChild(cell);
+    }
+  }
+
+  async function fetchEvents() {
+    if (!API_URL) return;
+    showLoading(true, "구글 시트 데이터 불러오는 중...");
+    try {
+      const res = await fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`);
+      const data = await res.json();
+      
+      const isSuccess = data.success || data.성공;
+      const list = data.events || data.이벤트;
+
+      if (isSuccess && Array.isArray(list)) {
+        eventsData = list;
+        renderCalendar();
+        showToast(`데이터 불러오기 완료 (${list.length}건)`);
+      } else {
+        showToast('시트 응답 오류: ' + (data.message || ''));
+      }
+    } catch (e) {
+      console.error("API Fetch Error:", e);
+      showToast('구글 시트 연동 실패. URL을 확인해 주세요.');
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  function openAddForm() {
+    selectedEvent = null;
+    document.getElementById('form-title').textContent = '일정 입력';
+    selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    updateFormDateDisplay();
+    document.querySelector('input[name="category"][value="☆"]').checked = true;
+    document.getElementById('event-content-input').value = '';
+    show('form-screen');
+  }
+
+  function openDetail(id) {
+    selectedEvent = eventsData.find(e => String(e.id) === String(id));
+    if (!selectedEvent) return;
+
+    document.getElementById('detail-date').textContent = formatDateKR(selectedEvent.date);
+    document.getElementById('detail-category').innerHTML = `${getCatBadgeHtml(selectedEvent.category)} <span>${catConfig[selectedEvent.category]?.name || selectedEvent.category}</span>`;
+    document.getElementById('detail-content').textContent = selectedEvent.content;
+
+    show('detail-screen');
+  }
+
+  function openEditForm() {
+    if (!selectedEvent) return;
+    hide('detail-screen');
+
+    document.getElementById('form-title').textContent = '일정 수정';
+    selectedFormDate = selectedEvent.date;
+    updateFormDateDisplay();
+
+    const shortCat = catConfig[selectedEvent.category]?.name || selectedEvent.category;
+    const radio = document.querySelector(`input[name="category"][value="${shortCat}"]`);
+    if (radio) radio.checked = true;
+
+    document.getElementById('event-content-input').value = selectedEvent.content;
+    show('form-screen');
+  }
+
+  async function saveEvent() {
+    const category = document.querySelector('input[name="category"]:checked').value;
+    const content = document.getElementById('event-content-input').value.trim();
+
+    if (!content) {
+      showToast('일정 내용을 입력해주세요.');
+      return;
+    }
+
+    showLoading(true, "저장 중...");
+    const isEdit = !!selectedEvent;
+
+    if (API_URL) {
+      const action = isEdit ? 'updateEvent' : 'addEvent';
+      const payload = { date: selectedFormDate, category, content };
+      if (isEdit) payload.id = selectedEvent.id;
+
+      try {
+        const res = await fetch(`${API_URL}?action=${action}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        const isSuccess = result.success || result.성공;
+
+        if (isSuccess) {
+          hide('form-screen');
+          fetchEvents();
+          showToast('구글 시트에 일정이 저장되었습니다.');
+        } else {
+          showToast('저장 실패: ' + (result.message || ''));
+        }
+      } catch (e) {
+        console.error("Save Error:", e);
+        showToast('저장 중 통신 오류가 발생했습니다.');
+      } finally {
+        showLoading(false);
+      }
+    } else {
+      // 오프라인/데모 모드 저장 처리
+      setTimeout(() => {
+        if (isEdit) {
+          selectedEvent.date = selectedFormDate;
+          selectedEvent.category = category;
+          selectedEvent.content = content;
+        } else {
+          const newId = 'A' + String(Date.now()).slice(-4);
+          eventsData.push({ id: newId, date: selectedFormDate, category, content });
+        }
+        hide('form-screen');
+        renderCalendar();
+        showLoading(false);
+        showToast('데모 모드로 저장되었습니다.');
+      }, 200);
+    }
+  }
+
+  function showDeleteModal() {
+    if (!selectedEvent) return;
+    document.getElementById('delete-preview').textContent = `[${selectedEvent.category}] ${selectedEvent.content}`;
+    show('delete-alert-modal');
+  }
+
+  async function confirmDelete() {
+    if (!selectedEvent) return;
+    hide('delete-alert-modal');
+    hide('detail-screen');
+    showLoading(true, "삭제 중...");
+
+    if (API_URL) {
+      try {
+        const res = await fetch(`${API_URL}?action=deleteEvent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ id: selectedEvent.id })
+        });
+        const result = await res.json();
+        const isSuccess = result.success || result.성공;
+
+        if (isSuccess) {
+          fetchEvents();
+          showToast('일정이 삭제되었습니다.');
+        } else {
+          showToast('삭제 실패: ' + (result.message || ''));
+        }
+      } catch (e) {
+        console.error("Delete Error:", e);
+        showToast('삭제 중 오류가 발생했습니다.');
+      } finally {
+        showLoading(false);
+      }
+    } else {
+      setTimeout(() => {
+        eventsData = eventsData.filter(e => String(e.id) !== String(selectedEvent.id));
+        renderCalendar();
+        showLoading(false);
+        showToast('삭제되었습니다.');
+      }, 200);
+    }
+  }
+
+  function openDatePicker() {
+    const parts = selectedFormDate.split('-');
+    pickerYear = parseInt(parts[0]);
+    pickerMonth = parseInt(parts[1]);
+    renderMiniCalendar();
+    show('mini-cal-modal');
+  }
+
+  function movePickerMonth(delta) {
+    pickerMonth += delta;
+    if (pickerMonth < 1) { pickerMonth = 12; pickerYear--; }
+    else if (pickerMonth > 12) { pickerMonth = 1; pickerYear++; }
+    renderMiniCalendar();
+  }
+
+  function renderMiniCalendar() {
+    document.getElementById('mini-cal-title').textContent = `${pickerYear}년 ${pickerMonth}월`;
+    const grid = document.getElementById('mini-cal-grid');
+    grid.innerHTML = '';
+
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    days.forEach((d, idx) => {
+      const h = document.createElement('div');
+      h.style.fontWeight = 'bold';
+      h.style.fontSize = '0.75rem';
+      if (idx === 0) h.style.color = 'var(--sunday-color)';
+      if (idx === 6) h.style.color = 'var(--saturday-color)';
+      h.textContent = d;
+      grid.appendChild(h);
+    });
+
+    const firstDay = new Date(pickerYear, pickerMonth - 1, 1).getDay();
+    const lastDate = new Date(pickerYear, pickerMonth, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+      grid.appendChild(document.createElement('div'));
+    }
+
+    for (let d = 1; d <= lastDate; d++) {
+      const dateStr = `${pickerYear}-${String(pickerMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const cell = document.createElement('div');
+      cell.className = 'mini-cal-cell';
+      cell.textContent = d;
+
+      if (dateStr === selectedFormDate) cell.classList.add('selected');
+
+      cell.addEventListener('click', () => {
+        selectedFormDate = dateStr;
+        updateFormDateDisplay();
+        hide('mini-cal-modal');
+      });
+
+      grid.appendChild(cell);
+    }
+  }
+
+  function updateFormDateDisplay() {
+    document.getElementById('selected-date-text').textContent = formatDateKR(selectedFormDate);
+  }
+
+  function formatDateKR(dateStr) {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    return `${parts[0]}년 ${parseInt(parts[1])}월 ${parseInt(parts[2])}일`;
+  }
+
+  function showToast(msg) {
+    let toast = document.getElementById('app-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'app-toast';
+      toast.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);color:white;padding:10px 18px;border-radius:20px;z-index:999;font-size:0.9rem;font-weight:bold;white-space:nowrap;transition:opacity 0.3s;pointer-events:none;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.display = 'block';
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 2500);
+  }
+
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
+  
+  function showLoading(b, msg) {
+    const overlay = document.getElementById('loading-overlay');
+    const txt = document.getElementById('loading-text');
+    if (msg) txt.textContent = msg;
+    if (b) overlay.classList.remove('hidden');
+    else overlay.classList.add('hidden');
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+</script>
+</body>
+</html>
