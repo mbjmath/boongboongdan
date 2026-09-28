@@ -171,6 +171,18 @@
       display: flex;
       flex-direction: column;
       background-color: white;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .calendar-cell:hover {
+      background-color: #f4f8f5;
+    }
+
+    .calendar-cell.other-month {
+      background-color: #fafafa;
+      opacity: 0.35;
+      cursor: default;
     }
 
     .calendar-cell.other-month {
@@ -488,7 +500,6 @@
     <div class="header-controls">
       <select id="year-select"></select>
       <select id="month-select"></select>
-      <button class="btn btn-icon" id="open-config-btn" title="API 설정">⚙️ API</button>
       <button class="btn btn-add" id="open-add-btn">＋ 일정</button>
     </div>
   </header>
@@ -607,6 +618,19 @@
     </div>
   </div>
 
+  <!-- 날짜별 일정 팝업 Modal -->
+  <div id="day-events-modal" class="alert-modal hidden">
+    <div class="alert-card" style="text-align: left; max-width: 360px; width: 90%;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+        <h3 id="day-modal-title" style="font-size: 1.1rem; color: #2e7d32; font-weight: bold;">날짜 일정</h3>
+        <button class="btn btn-secondary" id="close-day-modal-btn" style="padding: 4px 8px; font-size: 0.85rem;">✕</button>
+      </div>
+      <div id="day-modal-event-list" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+      </div>
+      <button class="btn btn-primary" id="day-modal-add-btn">＋ 이 날짜에 일정 추가</button>
+    </div>
+  </div>
+
   <!-- 삭제 확인 모달 -->
   <div id="delete-alert-modal" class="alert-modal hidden">
     <div class="alert-card">
@@ -632,6 +656,7 @@
   let currentYear = today.getFullYear();
   let currentMonth = today.getMonth() + 1;
   let selectedEvent = null;
+  let selectedDayDate = '';
   let pickerYear = currentYear;
   let pickerMonth = currentMonth;
   let selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -698,13 +723,15 @@
       else renderCalendar();
     });
 
-    document.getElementById('open-add-btn').addEventListener('click', openAddForm);
+    document.getElementById('open-add-btn').addEventListener('click', () => openAddForm());
     document.getElementById('close-form-btn').addEventListener('click', () => hide('form-screen'));
     document.getElementById('close-detail-btn').addEventListener('click', () => hide('detail-screen'));
     
-    document.getElementById('open-config-btn').addEventListener('click', openConfigModal);
-    document.getElementById('close-config-btn').addEventListener('click', () => hide('config-modal'));
-    document.getElementById('save-config-btn').addEventListener('click', saveApiUrl);
+    document.getElementById('close-day-modal-btn').addEventListener('click', () => hide('day-events-modal'));
+    document.getElementById('day-modal-add-btn').addEventListener('click', () => {
+      hide('day-events-modal');
+      openAddForm(selectedDayDate);
+    });
 
     document.getElementById('selected-date-display').addEventListener('click', openDatePicker);
     document.getElementById('close-mini-cal').addEventListener('click', () => hide('mini-cal-modal'));
@@ -811,6 +838,7 @@
 
       const cell = document.createElement('div');
       cell.className = 'calendar-cell';
+      cell.addEventListener('click', () => openDayModal(dateStr));
 
       let colorStyle = 'var(--weekday-color)';
       if (dayOfWeek === 0 || holidays[dateStr]) {
@@ -823,17 +851,21 @@
       let html = `<div class="cell-date ${todayClass}" style="color: ${isToday ? '#ffffff' : colorStyle};">${day}</div>`;
       html += `<div class="category-container">`;
 
+      // 📌 일정이 있는 카테고리만 필터링하여 출력
       categories.forEach(cat => {
         const catEvents = eventsData.filter(e => e.date === dateStr && (e.category === cat || catConfig[e.category]?.name === cat));
-        html += `<div class="category-row">
-          <div class="category-label">${getCatBadgeHtml(cat)}</div>
-          <div class="category-content-list">`;
         
-        catEvents.forEach(ev => {
-          html += `<div class="event-item" onclick="openDetail('${ev.id}')">${escapeHtml(ev.content)}</div>`;
-        });
+        if (catEvents.length > 0) {
+          html += `<div class="category-row">
+            <div class="category-label">${getCatBadgeHtml(cat)}</div>
+            <div class="category-content-list">`;
+          
+          catEvents.forEach(ev => {
+            html += `<div class="event-item" onclick="event.stopPropagation(); openDetail('${ev.id}')">${escapeHtml(ev.content)}</div>`;
+          });
 
-        html += `</div></div>`;
+          html += `</div></div>`;
+        }
       });
 
       html += `</div>`;
@@ -852,35 +884,40 @@
     }
   }
 
-  async function fetchEvents() {
-    if (!API_URL) return;
-    showLoading(true, "구글 시트 데이터 불러오는 중...");
-    try {
-      const res = await fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`);
-      const data = await res.json();
-      
-      const isSuccess = data.success || data.성공;
-      const list = data.events || data.이벤트;
+  function openDayModal(dateStr) {
+    selectedDayDate = dateStr;
+    document.getElementById('day-modal-title').textContent = formatDateKR(dateStr);
+    const listContainer = document.getElementById('day-modal-event-list');
+    listContainer.innerHTML = '';
 
-      if (isSuccess && Array.isArray(list)) {
-        eventsData = list;
-        renderCalendar();
-        showToast(`데이터 불러오기 완료 (${list.length}건)`);
-      } else {
-        showToast('시트 응답 오류: ' + (data.message || ''));
-      }
-    } catch (e) {
-      console.error("API Fetch Error:", e);
-      showToast('구글 시트 연동 실패. URL을 확인해 주세요.');
-    } finally {
-      showLoading(false);
+    const dayEvents = eventsData.filter(e => e.date === dateStr);
+
+    if (dayEvents.length === 0) {
+      listContainer.innerHTML = `<div style="text-align: center; color: #888; padding: 20px 0; font-size: 0.95rem;">등록된 일정이 없습니다.</div>`;
+    } else {
+      dayEvents.forEach(ev => {
+        const item = document.createElement('div');
+        item.style.cssText = 'display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; transition: background-color 0.2s;';
+        item.innerHTML = `
+          ${getCatBadgeHtml(ev.category)}
+          <span style="flex-grow: 1; font-size: 0.95rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(ev.content)}</span>
+          <span style="font-size: 0.85rem; color: #94a3b8;">&gt;</span>
+        `;
+        item.onclick = () => {
+          hide('day-events-modal');
+          openDetail(ev.id);
+        };
+        listContainer.appendChild(item);
+      });
     }
+
+    show('day-events-modal');
   }
 
-  function openAddForm() {
+  function openAddForm(targetDate) {
     selectedEvent = null;
     document.getElementById('form-title').textContent = '일정 입력';
-    selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    selectedFormDate = targetDate || `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     updateFormDateDisplay();
     document.querySelector('input[name="category"][value="☆"]').checked = true;
     document.getElementById('event-content-input').value = '';
