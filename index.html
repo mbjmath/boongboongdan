@@ -622,8 +622,10 @@
 </div>
 
 <script>
-  // 저장된 API URL 로드 또는 기본값 설정
-  let API_URL = localStorage.getItem('GAS_API_URL') || "";
+  // =========================================================================
+  // 📌 구글 웹앱 URL 기본값 설정 완료
+  // =========================================================================
+  let API_URL = localStorage.getItem('GAS_API_URL') || "https://script.google.com/macros/s/AKfycbwviJybQ8ZDzNb8oPNRtXsWhnnxfzpEN2X4vCM_2vmGvTsFIUenY9bAkwK39Iy8ix07/exec";
 
   // 현재 날짜 동적 설정 (접속 시점의 오늘 날짜 기준)
   const today = new Date();
