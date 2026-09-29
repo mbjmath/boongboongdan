@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>붕붕단 캘린더</title>
+  <title>월간 일정 관리</title>
   <style>
     :root {
       --primary-color: #2e7d32;
@@ -494,7 +494,7 @@
   <!-- 상단 헤더 -->
   <header>
     <div class="header-title-container">
-      <div class="header-title">붕붕단 캘린더</div>
+      <div class="header-title">월간 일정</div>
       <div class="api-status-badge" id="api-status-badge">
         <span id="status-icon">⚪</span> <span id="status-text">연동 확인 중</span>
       </div>
@@ -688,16 +688,61 @@
     }
   }
 
-  // 법정 공휴일 예시 데이터
-  const holidays = {
-    "2026-01-01": "신정",
-    "2026-02-16": "설날 연휴", "2026-02-17": "설날", "2026-02-18": "설날 연휴",
-    "2026-03-01": "삼일절", "2026-03-02": "대체공휴일",
-    "2026-05-05": "어린이날", "2026-05-24": "부처님오신날",
-    "2026-06-06": "현충일", "2026-08-15": "광복절",
-    "2026-09-24": "추석 연휴", "2026-09-25": "추석", "2026-09-26": "추석 연휴",
-    "2026-10-03": "개천절", "2026-10-09": "한글날", "2026-12-25": "성탄절"
-  };
+  // 공휴일 데이터는 Apps Script에서 대한민국 공휴일 캘린더를 통해 가져옵니다.
+  // 예시 날짜를 하드코딩하지 않으므로 연도와 월을 바꿔도 해당 연도의 공휴일이 반영됩니다.
+  let holidays = {};
+  let holidayYearLoaded = null;
+
+  function getHolidayCacheKey(year) {
+    return `calendar_holidays_${year}`;
+  }
+
+  function loadCachedHolidays(year) {
+    try {
+      const cached = localStorage.getItem(getHolidayCacheKey(year));
+      if (!cached) return null;
+      const parsed = JSON.parse(cached);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setCachedHolidays(year, data) {
+    try {
+      localStorage.setItem(getHolidayCacheKey(year), JSON.stringify(data));
+    } catch (e) {
+      console.warn('Holiday cache write error:', e);
+    }
+  }
+
+  async function fetchHolidays(year) {
+    const cached = loadCachedHolidays(year);
+    if (cached) {
+      holidays = cached;
+      holidayYearLoaded = year;
+    }
+
+    if (!API_URL) {
+      renderCalendar();
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}?action=getHolidays&year=${year}`);
+      const data = await response.json();
+
+      if (data.success) {
+        holidays = data.holidays || {};
+        holidayYearLoaded = year;
+        setCachedHolidays(year, holidays);
+      }
+    } catch (error) {
+      console.error("fetchHolidays Error:", error);
+    }
+
+    renderCalendar();
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     initSelects();
@@ -763,9 +808,14 @@
     }
 
     try {
-      const response = await fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`);
-      const data = await response.json();
-      
+      const [eventsResponse, holidaysResponse] = await Promise.all([
+        fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`),
+        fetch(`${API_URL}?action=getHolidays&year=${currentYear}`)
+      ]);
+
+      const data = await eventsResponse.json();
+      const holidayData = await holidaysResponse.json();
+
       const fetchedList = data.events || data.이벤트 || [];
       eventsData = fetchedList.map(item => ({
         id: item.id || item.ID,
@@ -773,6 +823,12 @@
         category: item.category || item.Category || '☆',
         content: item.content || item.Content || ''
       }));
+
+      if (holidayData.success) {
+        holidays = holidayData.holidays || {};
+        holidayYearLoaded = currentYear;
+        setCachedHolidays(currentYear, holidays);
+      }
 
       // 캐시 업데이트 및 달력 최신화
       setCachedEvents(currentYear, currentMonth, eventsData);
