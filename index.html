@@ -756,6 +756,7 @@
 
     document.getElementById('year-select').addEventListener('change', (e) => {
       currentYear = parseInt(e.target.value);
+      if (holidayYearLoaded !== currentYear) holidays = {};
       if (API_URL) fetchEvents();
       else renderCalendar();
     });
@@ -824,10 +825,13 @@
         content: item.content || item.Content || ''
       }));
 
-      if (holidayData.success) {
+      if (holidayData && holidayData.success) {
         holidays = holidayData.holidays || {};
         holidayYearLoaded = currentYear;
         setCachedHolidays(currentYear, holidays);
+      } else {
+        console.warn("공휴일 데이터를 가져오지 못했습니다.", holidayData);
+        if (holidayYearLoaded !== currentYear) holidays = {};
       }
 
       // 캐시 업데이트 및 달력 최신화
@@ -949,14 +953,16 @@
       cell.addEventListener('click', () => openDayModal(dateStr));
 
       let colorStyle = 'var(--weekday-color)';
-      if (dayOfWeek === 0 || holidays[dateStr]) {
+      const isHoliday = Object.prototype.hasOwnProperty.call(holidays, dateStr);
+      if (dayOfWeek === 0 || isHoliday) {
         colorStyle = 'var(--sunday-color)';
       } else if (dayOfWeek === 6) {
         colorStyle = 'var(--saturday-color)';
       }
 
       const todayClass = isToday ? 'is-today' : '';
-      let html = `<div class="cell-date ${todayClass}" style="color: ${isToday ? '#ffffff' : colorStyle};">${day}</div>`;
+      let holidayTitle = isHoliday && holidays[dateStr] ? ` title="${String(holidays[dateStr]).replace(/"/g, '&quot;')}"` : '';
+      let html = `<div class="cell-date ${todayClass}"${holidayTitle} style="color: ${isToday ? '#ffffff' : colorStyle};">${day}</div>`;
       html += `<div class="category-container">`;
 
       // 📌 일정 텍스트 없이 카테고리 아이콘(뱃지)만 표시
