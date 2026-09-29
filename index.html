@@ -29,24 +29,28 @@
       display: flex;
       justify-content: center;
       min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
     }
 
     #app-container {
       width: 100%;
       max-width: 600px;
       background-color: #ffffff;
-      min-height: 100vh;
+      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       position: relative;
+      overflow: hidden;
     }
 
     /* 헤더 */
     header {
       background-color: var(--primary-color);
       color: white;
-      padding: 12px 14px;
+      padding: 10px 14px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -54,6 +58,7 @@
       top: 0;
       z-index: 10;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      flex-shrink: 0;
     }
 
     .header-title-container {
@@ -62,13 +67,13 @@
     }
 
     .header-title {
-      font-size: 1.25rem;
+      font-size: 1.2rem;
       font-weight: bold;
       letter-spacing: -0.5px;
     }
 
     .api-status-badge {
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       opacity: 0.9;
       margin-top: 2px;
       display: flex;
@@ -86,9 +91,9 @@
       background: white;
       color: #333;
       border: 1px solid #ccc;
-      padding: 6px 8px;
+      padding: 5px 6px;
       border-radius: 6px;
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 600;
       outline: none;
     }
@@ -96,8 +101,8 @@
     .btn {
       border: none;
       border-radius: 6px;
-      padding: 7px 10px;
-      font-size: 0.95rem;
+      padding: 6px 9px;
+      font-size: 0.88rem;
       font-weight: bold;
       cursor: pointer;
       display: inline-flex;
@@ -139,8 +144,9 @@
       border-bottom: 1px solid var(--border-color);
       text-align: center;
       font-weight: bold;
-      font-size: 0.95rem;
-      padding: 10px 0;
+      font-size: 0.88rem;
+      padding: 6px 0;
+      flex-shrink: 0;
     }
 
     .day-sun { color: var(--sunday-color); }
@@ -150,24 +156,25 @@
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      grid-auto-rows: minmax(75px, 1fr);
+      grid-auto-rows: 1fr;
       border-left: 1px solid var(--border-color);
       border-top: 1px solid var(--border-color);
       flex-grow: 1;
       background-color: #ffffff;
+      overflow: hidden;
     }
 
     .calendar-cell {
       border-right: 1px solid var(--border-color);
       border-bottom: 1px solid var(--border-color);
-      padding: 4px 2px;
+      padding: 2px 1px;
       display: flex;
       flex-direction: column;
       background-color: white;
       cursor: pointer;
       transition: background-color 0.15s ease;
       overflow: hidden;
-      min-height: 75px;
+      min-height: 0;
     }
 
     .calendar-cell:hover {
@@ -181,19 +188,20 @@
     }
 
     .cell-date {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: bold;
       text-align: center;
-      padding: 2px 0;
+      padding: 1px 0;
+      line-height: 1.1;
     }
 
     .cell-date.is-today {
       background-color: var(--primary-color);
       color: #ffffff !important;
       border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      line-height: 22px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
       margin: 0 auto;
       padding: 0;
     }
@@ -201,11 +209,11 @@
     .category-container {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
       justify-content: flex-start;
       align-content: stretch;
-      margin-top: 4px;
-      padding: 0 2px;
+      margin-top: 2px;
+      padding: 0 1px;
       width: 100%;
       flex-grow: 1;
       overflow: hidden;
@@ -225,13 +233,13 @@
     .cat-badge-count {
       position: absolute;
       top: 50%;
-      right: 4px;
+      right: 2px;
       transform: translateY(-50%);
       background: rgba(0, 0, 0, 0.35);
       color: #ffffff;
-      font-size: 0.65rem;
-      border-radius: 8px;
-      padding: 1px 5px;
+      font-size: 0.6rem;
+      border-radius: 6px;
+      padding: 1px 4px;
       line-height: 1;
       display: flex;
       align-items: center;
@@ -241,17 +249,17 @@
     }
 
     .cat-badge {
-      height: 20px;
-      border-radius: 4px;
+      height: 16px;
+      border-radius: 3px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: bold;
       color: #ffffff;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
       flex-shrink: 0;
-      padding: 0 8px;
+      padding: 0 4px;
       white-space: nowrap;
     }
 
