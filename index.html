@@ -150,7 +150,7 @@
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      grid-auto-rows: minmax(125px, auto);
+      grid-auto-rows: minmax(75px, 1fr);
       border-left: 1px solid var(--border-color);
       border-top: 1px solid var(--border-color);
       flex-grow: 1;
@@ -160,12 +160,14 @@
     .calendar-cell {
       border-right: 1px solid var(--border-color);
       border-bottom: 1px solid var(--border-color);
-      padding: 3px;
+      padding: 4px 2px;
       display: flex;
       flex-direction: column;
       background-color: white;
       cursor: pointer;
       transition: background-color 0.15s ease;
+      overflow: hidden;
+      min-height: 75px;
     }
 
     .calendar-cell:hover {
@@ -179,11 +181,10 @@
     }
 
     .cell-date {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       font-weight: bold;
       text-align: center;
       padding: 2px 0;
-      border-bottom: 1px dashed #efefef;
     }
 
     .cell-date.is-today {
@@ -199,27 +200,37 @@
 
     .category-container {
       display: flex;
-      flex-direction: column;
-      gap: 2px;
-      margin-top: 3px;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: center;
+      align-content: flex-start;
+      margin-top: 4px;
       flex-grow: 1;
+      overflow: hidden;
     }
 
-    .category-row {
-      display: flex;
-      font-size: 0.78rem;
-      min-height: 22px;
-      line-height: 1.2;
+    .cat-badge-wrapper {
+      position: relative;
+      display: inline-flex;
       align-items: center;
-      padding: 1px 0;
+      justify-content: center;
     }
 
-    .category-label {
-      width: 26px;
+    .cat-badge-count {
+      position: absolute;
+      top: -3px;
+      right: -4px;
+      background: #333;
+      color: #fff;
+      font-size: 0.62rem;
+      border-radius: 50%;
+      width: 13px;
+      height: 13px;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
+      font-weight: bold;
+      border: 1px solid #fff;
     }
 
     .cat-badge {
@@ -240,30 +251,6 @@
     .cat-badge-mung { background-color: #3b82f6; }
     .cat-badge-kang { background-color: #ef4444; }
     .cat-badge-sing { background-color: #eab308; color: #ffffff; }
-
-    .category-content-list {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      overflow: hidden;
-    }
-
-    .event-item {
-      background-color: #e8f5e9;
-      color: #1b5e20;
-      border-radius: 3px;
-      padding: 2px 5px;
-      cursor: pointer;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: 0.78rem;
-      border-left: 3px solid var(--primary-color);
-    }
-    .event-item:hover {
-      background-color: #c8e6c9;
-    }
 
     /* 풀스크린 화면 */
     .view-screen {
@@ -810,20 +797,13 @@
       let html = `<div class="cell-date ${todayClass}" style="color: ${isToday ? '#ffffff' : colorStyle};">${day}</div>`;
       html += `<div class="category-container">`;
 
-      // 📌 일정이 있는 카테고리만 필터링하여 출력
+      // 📌 일정 텍스트 없이 카테고리 아이콘(뱃지)만 표시
       categories.forEach(cat => {
         const catEvents = eventsData.filter(e => e.date === dateStr && (e.category === cat || catConfig[e.category]?.name === cat));
         
         if (catEvents.length > 0) {
-          html += `<div class="category-row">
-            <div class="category-label">${getCatBadgeHtml(cat)}</div>
-            <div class="category-content-list">`;
-          
-          catEvents.forEach(ev => {
-            html += `<div class="event-item" onclick="event.stopPropagation(); openDetail('${ev.id}')">${escapeHtml(ev.content)}</div>`;
-          });
-
-          html += `</div></div>`;
+          const countBadge = catEvents.length > 1 ? `<span class="cat-badge-count">${catEvents.length}</span>` : '';
+          html += `<div class="cat-badge-wrapper">${getCatBadgeHtml(cat)}${countBadge}</div>`;
         }
       });
 
