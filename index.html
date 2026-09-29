@@ -1,3 +1,167 @@
+좋습니다. Firebase 로그인도 정상이고, 프로젝트 목록 조회도 정상입니다.
+Unable to fetch... 경고는 무시해도 됩니다. 실제 프로젝트 목록을 정상적으로 가져왔습니다.
+
+우리가 사용할 프로젝트는:
+
+boongboongdan
+
+입니다.
+
+이제 family-calendar 폴더에서 다시 초기화를 진행하면 됩니다.
+
+1. 현재 폴더가 맞는지 확인
+
+아마 이미 맞지만 다음을 입력하세요.
+
+cd %USERPROFILE%\Desktop\family-calendar
+2. Firebase 초기화 다시 실행
+firebase init hosting
+
+이번에는 질문이 나오면 다음처럼 선택하세요.
+
+①
+
+Use an existing project
+
+→ Enter
+
+② 프로젝트 선택
+
+boongboongdan (current)
+
+→ Enter
+
+③ Public directory
+
+public
+
+→ Enter
+
+④ Single-page app
+
+n
+
+→ Enter
+
+⑤ GitHub automatic builds
+
+n
+
+→ Enter
+
+3. 중요한 점
+
+이번에는 마지막에 다음과 같은 메시지가 나와야 합니다.
+
+✔ Firebase initialization complete!
+
+그리고 family-calendar 폴더에:
+
+family-calendar
+├─ .firebaserc
+├─ firebase.json
+└─ public
+   ├─ index.html
+   └─ 404.html
+
+이렇게 되어야 합니다.
+
+지금 firebase init hosting을 다시 실행하세요.
+질문이 하나씩 나오면 제가 바로 선택할 값을 알려드릴 테니, 일단 첫 화면부터 그대로 보내주시면 됩니다.
+
+i  public\404.html is unchanged
+
+Error: Failed to make request to https://www.gstatic.com/firebasejs/releases.json
+
+
+이제 원인이 꽤 명확합니다. Firebase 프로젝트나 로그인 문제가 아니라, firebase init이 gstatic.com의 releases.json을 가져오는 과정에서 실패하는 문제입니다. 그런데 firebase projects:list는 성공했으므로 인증과 Firebase 프로젝트 접근 자체는 정상입니다.
+
+그리고 지금은 firebase init hosting을 계속 반복할 필요가 없습니다. firebase.json과 .firebaserc만 직접 만들어도 됩니다. Firebase 공식 문서에서도 firebase.json이 Hosting 배포에 필요한 설정 파일이라고 설명합니다.
+
+이렇게 해봅시다
+
+family-calendar 폴더 안에 메모장을 이용해서 firebase.json 파일을 새로 만드세요.
+
+내용은 딱 이것만 넣습니다.
+
+{
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
+
+그리고 같은 폴더에 .firebaserc 파일도 만듭니다.
+
+{
+  "projects": {
+    "default": "boongboongdan"
+  }
+}
+
+최종적으로 구조가:
+
+family-calendar
+├─ firebase.json
+├─ .firebaserc
+└─ public
+   ├─ index.html
+   └─ 404.html
+
+가 되면 됩니다.
+
+그다음 명령 프롬프트에서:
+
+firebase deploy --only hosting
+
+을 실행합니다.
+
+이게 성공하면 Firebase가 Hosting 주소를 보여줍니다. Firebase 공식 문서상 Hosting 배포에는 firebase.json이 필요하고, firebase deploy가 해당 프로젝트의 Hosting 파일을 배포합니다.
+
+우리가 지금 만드는 것은 단순 정적 index.html이므로 이 방식으로 충분합니다. Firebase Hosting은 public 폴더의 정적 파일을 배포할 수 있습니다.
+
+원하시면 메모장으로 .firebaserc 파일을 만들 때 Windows에서 파일 확장자가 .txt로 붙지 않게 만드는 방법까지 제가 바로 이어서 알려드릴게요.
+
+오늘 오후 12:23
+index(1).html
+파일
+
+제미나이가 좀 하던건데 이놈이 갑자기 못하겠다네. 이어서 좀 해보자.
+
+멍,캉,싱 아이콘이 한글자씩이라 좀 허전해, 멍뭉이, 캉이, 싱이로 바꿔줘
+다음달, 이전달 버튼을 추가해줘
+
+좋습니다. 지금 올려주신 HTML을 기준으로 두 가지 수정해서 새 파일로 만들었습니다.
+
+카테고리
+
+☆
+멍 → 멍뭉이
+캉 → 캉이
+싱 → 싱이
+
+기존에 저장된 멍, 캉, 싱 데이터가 있어도 화면에서는 각각 멍뭉이, 캉이, 싱이로 표시되도록 호환 처리했습니다. 원본에는 현재 카테고리가 짧은 이름으로 설정되어 있고, 이미 멍뭉이·캉이·싱이에 대한 일부 호환 코드도 들어 있었습니다.
+
+이전달 ‹ / 다음달 › 버튼 추가
+연도·월 선택 양옆에 추가
+12월 → 다음달을 누르면 다음 해 1월
+1월 → 이전달을 누르면 이전 해 12월
+연도 선택값도 자동으로 변경
+해당 월의 일정도 다시 불러옴
+
+수정한 파일입니다.
+
+수정된 index_updated.html
+
+Firebase의 public 폴더에 있는 기존 index.html을 이 파일로 교체하면 됩니다.
+
+그리고 한 가지 확인할 점이 있습니다. 현재 HTML은 Google Apps Script 주소로 fetch()해서 데이터를 가져오도록 되어 있습니다.
+따라서 이번 수정은 화면 기능만 건드렸고, API 주소나 기존 일정 데이터 처리 부분은 건드리지 않았습니다.
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -116,6 +280,19 @@
       color: var(--primary-color);
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
+
+    .btn-month-nav {
+      background-color: #ffffff;
+      color: var(--primary-color);
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      font-size: 1.35rem;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .btn-month-nav:active { background-color: #f0f0f0; }
     .btn-add:active { background-color: #f0f0f0; }
 
     .btn-primary {
@@ -487,8 +664,10 @@
       </div>
     </div>
     <div class="header-controls">
+      <button class="btn btn-month-nav" id="prev-month-btn" title="이전달">‹</button>
       <select id="year-select"></select>
       <select id="month-select"></select>
+      <button class="btn btn-month-nav" id="next-month-btn" title="다음달">›</button>
       <button class="btn btn-add" id="open-add-btn">＋ 일정</button>
     </div>
   </header>
@@ -632,16 +811,16 @@
   let pickerMonth = currentMonth;
   let selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const categories = ['☆', '멍', '캉', '싱'];
+  const categories = ['☆', '멍뭉이', '캉이', '싱이'];
 
   const catConfig = {
     '☆': { class: 'cat-badge-star', name: '☆' },
-    '멍': { class: 'cat-badge-mung', name: '멍' },
-    '멍뭉이': { class: 'cat-badge-mung', name: '멍' },
-    '캉': { class: 'cat-badge-kang', name: '캉' },
-    '캉이': { class: 'cat-badge-kang', name: '캉' },
-    '싱': { class: 'cat-badge-sing', name: '싱' },
-    '싱이': { class: 'cat-badge-sing', name: '싱' }
+    '멍': { class: 'cat-badge-mung', name: '멍뭉이' },
+    '멍뭉이': { class: 'cat-badge-mung', name: '멍뭉이' },
+    '캉': { class: 'cat-badge-kang', name: '캉이' },
+    '캉이': { class: 'cat-badge-kang', name: '캉이' },
+    '싱': { class: 'cat-badge-sing', name: '싱이' },
+    '싱이': { class: 'cat-badge-sing', name: '싱이' }
   };
 
   function getCatBadgeHtml(cat) {
@@ -706,6 +885,9 @@
       else renderCalendar();
     });
 
+    document.getElementById('prev-month-btn').addEventListener('click', () => moveMainMonth(-1));
+    document.getElementById('next-month-btn').addEventListener('click', () => moveMainMonth(1));
+
     document.getElementById('open-add-btn').addEventListener('click', () => openAddForm());
     document.getElementById('close-form-btn').addEventListener('click', () => hide('form-screen'));
     document.getElementById('close-detail-btn').addEventListener('click', () => hide('detail-screen'));
@@ -769,6 +951,25 @@
     } finally {
       showLoading(false);
     }
+  }
+
+  function moveMainMonth(delta) {
+    currentMonth += delta;
+    if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+    else if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+
+    const yearSelect = document.getElementById('year-select');
+    const minYear = parseInt(yearSelect.options[0]?.value);
+    const maxYear = parseInt(yearSelect.options[yearSelect.options.length - 1]?.value);
+
+    if (currentYear < minYear || currentYear > maxYear) initSelects();
+    else {
+      yearSelect.value = String(currentYear);
+      document.getElementById('month-select').value = String(currentMonth);
+    }
+
+    if (API_URL) fetchEvents();
+    else renderCalendar();
   }
 
   function initSelects() {
@@ -951,8 +1152,11 @@
     selectedFormDate = selectedEvent.date;
     updateFormDateDisplay();
 
-    const shortCat = catConfig[selectedEvent.category]?.name || selectedEvent.category;
-    const radio = document.querySelector(`input[name="category"][value="${shortCat}"]`);
+    const selectedCategory = ['멍', '멍뭉이'].includes(selectedEvent.category) ? '멍뭉이'
+      : ['캉', '캉이'].includes(selectedEvent.category) ? '캉이'
+      : ['싱', '싱이'].includes(selectedEvent.category) ? '싱이'
+      : '☆';
+    const radio = document.querySelector(`input[name="category"][value="${selectedCategory}"]`);
     if (radio) radio.checked = true;
 
     document.getElementById('event-content-input').value = selectedEvent.content;
@@ -1168,3 +1372,7 @@
 </script>
 </body>
 </html>
+index_updated.html
+HTML
+데이터 분석 한도에 도달했습니다. ChatGPT Plus(으)로 업그레이드하거나 PM 7:12 이후에 다시 시도하세요.
+Plus 다시 가입
