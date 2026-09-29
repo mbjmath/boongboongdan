@@ -200,43 +200,49 @@
 
     .category-container {
       display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      justify-content: center;
-      align-content: flex-start;
+      flex-direction: column;
+      gap: 3px;
+      justify-content: flex-start;
+      align-content: stretch;
       margin-top: 4px;
+      padding: 0 2px;
+      width: 100%;
       flex-grow: 1;
       overflow: hidden;
     }
 
     .cat-badge-wrapper {
       position: relative;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      justify-content: center;
+      width: 100%;
+    }
+
+    .cat-badge-wrapper .cat-badge {
+      width: 100%;
     }
 
     .cat-badge-count {
       position: absolute;
-      top: -3px;
-      right: -4px;
-      background: #333;
-      color: #fff;
-      font-size: 0.62rem;
-      border-radius: 50%;
-      width: 13px;
-      height: 13px;
+      top: 50%;
+      right: 4px;
+      transform: translateY(-50%);
+      background: rgba(0, 0, 0, 0.35);
+      color: #ffffff;
+      font-size: 0.65rem;
+      border-radius: 8px;
+      padding: 1px 5px;
+      line-height: 1;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      border: 1px solid #fff;
+      border: none;
     }
 
     .cat-badge {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
+      height: 20px;
+      border-radius: 4px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -245,6 +251,8 @@
       color: #ffffff;
       box-shadow: 0 1px 2px rgba(0,0,0,0.12);
       flex-shrink: 0;
+      padding: 0 8px;
+      white-space: nowrap;
     }
 
     .cat-badge-star { background-color: #16a34a; }
@@ -635,6 +643,28 @@
 
   let eventsData = [];
 
+  // 📌 캐시 키 생성 및 저장/조회 헬퍼 함수 (SWR 패턴 적용)
+  function getCacheKey(year, month) {
+    return `calendar_events_${year}_${String(month).padStart(2, '0')}`;
+  }
+
+  function getCachedEvents(year, month) {
+    try {
+      const cached = localStorage.getItem(getCacheKey(year, month));
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function setCachedEvents(year, month, data) {
+    try {
+      localStorage.setItem(getCacheKey(year, month), JSON.stringify(data));
+    } catch (e) {
+      console.warn('Cache write error:', e);
+    }
+  }
+
   // 법정 공휴일 예시 데이터
   const holidays = {
     "2026-01-01": "신정",
@@ -648,7 +678,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initSelects();
-    updateStatusBadge();
+    updateStatusBadge('idle');
 
     if (API_URL) {
       fetchEvents();
@@ -691,7 +721,21 @@
   });
 
   async function fetchEvents() {
-    showLoading(true, "시트 데이터를 불러오는 중...");
+    // 1. 캐시 데이터가 있는지 확인 후 0초 만에 달력에 먼저 렌더링 (Stale-While-Revalidate)
+    const cachedList = getCachedEvents(currentYear, currentMonth);
+    let hasCache = false;
+
+    if (cachedList && Array.isArray(cachedList)) {
+      eventsData = cachedList;
+      renderCalendar();
+      hasCache = true;
+      updateStatusBadge('syncing', '동기화 중...');
+    } else {
+      // 캐시가 없으면 기본 차단형 로딩 표시
+      showLoading(true, "데이터를 불러오는 중...");
+      updateStatusBadge('syncing', '동기화 중...');
+    }
+
     try {
       const response = await fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`);
       const data = await response.json();
@@ -703,14 +747,19 @@
         category: item.category || item.Category || '☆',
         content: item.content || item.Content || ''
       }));
-      updateStatusBadge(true);
+
+      // 캐시 업데이트 및 달력 최신화
+      setCachedEvents(currentYear, currentMonth, eventsData);
+      renderCalendar();
+      updateStatusBadge('success', '구글시트 연동됨');
     } catch (error) {
       console.error("fetchEvents Error:", error);
-      showToast("데이터를 불러오는 도중 오류가 발생했습니다.");
-      updateStatusBadge(false);
+      if (!hasCache) {
+        showToast("데이터를 불러오는 도중 오류가 발생했습니다.");
+      }
+      updateStatusBadge('error', '동기화 실패');
     } finally {
       showLoading(false);
-      renderCalendar();
     }
   }
 
@@ -741,15 +790,27 @@
     }
   }
 
-  function updateStatusBadge(isSuccess = true) {
+  function updateStatusBadge(status = 'success', customText = null) {
     const icon = document.getElementById('status-icon');
     const text = document.getElementById('status-text');
-    if (API_URL && isSuccess) {
-      icon.textContent = '🟢';
-      text.textContent = '구글시트 연동됨';
-    } else {
+    if (!API_URL) {
       icon.textContent = '🔴';
-      text.textContent = '연동 실패/확인 필요';
+      text.textContent = 'API URL 없음';
+      return;
+    }
+
+    if (status === 'syncing') {
+      icon.textContent = '🟡';
+      text.textContent = customText || '동기화 중...';
+    } else if (status === 'success') {
+      icon.textContent = '🟢';
+      text.textContent = customText || '구글시트 연동됨';
+    } else if (status === 'error') {
+      icon.textContent = '🔴';
+      text.textContent = customText || '연동 실패';
+    } else {
+      icon.textContent = '⚪';
+      text.textContent = '연동 확인 중';
     }
   }
 
@@ -899,9 +960,26 @@
       return;
     }
 
-    showLoading(true, "저장 중...");
     const isEdit = !!selectedEvent;
+    const tempId = isEdit ? selectedEvent.id : 'temp_' + Date.now();
+    const newEvent = { id: tempId, date: selectedFormDate, category, content };
 
+    // 1. 낙관적 UI 업데이트 (화면 및 캐시 즉시 변경 후 모달 닫기)
+    if (isEdit) {
+      eventsData = eventsData.map(e => e.id === tempId ? newEvent : e);
+    } else {
+      eventsData.push(newEvent);
+    }
+
+    // 선택된 날짜의 연/월 추출하여 캐시 업데이트
+    const [eYear, eMonth] = selectedFormDate.split('-').map(Number);
+    setCachedEvents(eYear, eMonth, eventsData.filter(e => e.date.startsWith(`${eYear}-${String(eMonth).padStart(2, '0')}`)));
+    
+    renderCalendar();
+    hide('form-screen');
+    showToast(isEdit ? '일정을 수정했습니다.' : '일정을 추가했습니다.');
+
+    // 2. 백그라운드 서버 전송
     if (API_URL) {
       const action = isEdit ? 'updateEvent' : 'addEvent';
       const payload = { date: selectedFormDate, category, content };
@@ -917,17 +995,19 @@
         const isSuccess = result.success || result.성공;
 
         if (isSuccess) {
-          hide('form-screen');
-          fetchEvents();
-          showToast('구글 시트에 일정이 저장되었습니다.');
+          // 백엔드에서 부여된 실제 ID가 있다면 갱신
+          if (!isEdit && result.id) {
+            newEvent.id = result.id;
+          }
+          fetchEvents(); // 데이터 동기화
         } else {
-          showToast('저장 실패: ' + (result.message || ''));
+          showToast('서버 저장 실패: ' + (result.message || ''));
+          fetchEvents(); // 원복
         }
       } catch (e) {
         console.error("Save Error:", e);
-        showToast('저장 중 통신 오류가 발생했습니다.');
-      } finally {
-        showLoading(false);
+        showToast('서버 전송 중 오류가 발생했습니다.');
+        fetchEvents(); // 원복
       }
     }
   }
@@ -940,31 +1020,41 @@
 
   async function confirmDelete() {
     if (!selectedEvent) return;
+    const targetId = selectedEvent.id;
+    const targetDate = selectedEvent.date;
+
     hide('delete-alert-modal');
     hide('detail-screen');
-    showLoading(true, "삭제 중...");
 
+    // 1. 낙관적 UI 업데이트 (즉시 삭제 후 렌더링)
+    eventsData = eventsData.filter(e => String(e.id) !== String(targetId));
+    const [eYear, eMonth] = targetDate.split('-').map(Number);
+    setCachedEvents(eYear, eMonth, eventsData.filter(e => e.date.startsWith(`${eYear}-${String(eMonth).padStart(2, '0')}`)));
+    
+    renderCalendar();
+    showToast('일정을 삭제했습니다.');
+
+    // 2. 백그라운드 서버 삭제 전송
     if (API_URL) {
       try {
         const res = await fetch(`${API_URL}?action=deleteEvent`, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ id: selectedEvent.id })
+          body: JSON.stringify({ id: targetId })
         });
         const result = await res.json();
         const isSuccess = result.success || result.성공;
 
         if (isSuccess) {
           fetchEvents();
-          showToast('일정이 삭제되었습니다.');
         } else {
           showToast('삭제 실패: ' + (result.message || ''));
+          fetchEvents();
         }
       } catch (e) {
         console.error("Delete Error:", e);
-        showToast('삭제 중 오류가 발생했습니다.');
-      } finally {
-        showLoading(false);
+        showToast('삭제 요청 중 오류가 발생했습니다.');
+        fetchEvents();
       }
     }
   }
