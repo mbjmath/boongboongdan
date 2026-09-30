@@ -957,12 +957,14 @@
       cell.className = 'calendar-cell';
       cell.addEventListener('click', () => openDayModal(dateStr));
 
-let colorStyle = 'var(--weekday-color)';
-if (dayOfWeek === 0 || holidays[dateStr]) {
-  colorStyle = 'var(--sunday-color)';
-} else if (dayOfWeek === 6) {
-  colorStyle = 'var(--saturday-color)';
-}
+      let colorStyle = 'var(--weekday-color)';
+      const isHoliday = Object.prototype.hasOwnProperty.call(holidays, dateStr);
+      if (dayOfWeek === 0 || isHoliday) {
+        colorStyle = 'var(--sunday-color)';
+      } else if (dayOfWeek === 6) {
+        colorStyle = 'var(--saturday-color)';
+      }
+
       const todayClass = isToday ? 'is-today' : '';
       let holidayTitle = isHoliday && holidays[dateStr] ? ` title="${String(holidays[dateStr]).replace(/"/g, '&quot;')}"` : '';
       let html = `<div class="cell-date ${todayClass}"${holidayTitle} style="color: ${isToday ? '#ffffff' : colorStyle};">${day}</div>`;
