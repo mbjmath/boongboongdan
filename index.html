@@ -276,9 +276,10 @@
       white-space: nowrap;
     }
 
-    .cat-badge-star { background-color: #16a34a; }
+    .cat-badge-star { background-color: #ef4444; }
+    .cat-badge-common { background-color: #16a34a; }
     .cat-badge-mung { background-color: #3b82f6; }
-    .cat-badge-kang { background-color: #ef4444; }
+    .cat-badge-kang { background-color: #ec4899; }
     .cat-badge-sing { background-color: #eab308; color: #ffffff; }
 
     /* 풀스크린 화면 */
@@ -538,22 +539,26 @@
       </div>
       <div class="form-group">
         <label>카테고리</label>
-        <div class="radio-group" style="flex-direction: row; justify-content: space-around;">
+        <div class="radio-group" style="flex-direction: row; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
           <label class="radio-label">
             <input type="radio" name="category" value="☆" checked>
             <span class="cat-badge cat-badge-star">☆</span>
           </label>
           <label class="radio-label">
-            <input type="radio" name="category" value="멍">
-            <span class="cat-badge cat-badge-mung">멍</span>
+            <input type="radio" name="category" value="공통">
+            <span class="cat-badge cat-badge-common">공통</span>
           </label>
           <label class="radio-label">
-            <input type="radio" name="category" value="캉">
-            <span class="cat-badge cat-badge-kang">캉</span>
+            <input type="radio" name="category" value="멍뭉이">
+            <span class="cat-badge cat-badge-mung">멍뭉이</span>
           </label>
           <label class="radio-label">
-            <input type="radio" name="category" value="싱">
-            <span class="cat-badge cat-badge-sing">싱</span>
+            <input type="radio" name="category" value="캉이">
+            <span class="cat-badge cat-badge-kang">캉이</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="category" value="싱이">
+            <span class="cat-badge cat-badge-sing">싱이</span>
           </label>
         </div>
       </div>
@@ -647,10 +652,11 @@
   let pickerMonth = currentMonth;
   let selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const categories = ['☆', '멍뭉이', '캉이', '싱이'];
+  const categories = ['☆', '공통', '멍뭉이', '캉이', '싱이'];
 
   const catConfig = {
     '☆': { class: 'cat-badge-star', name: '☆' },
+    '공통': { class: 'cat-badge-common', name: '공통' },
     '멍': { class: 'cat-badge-mung', name: '멍뭉이' },
     '멍뭉이': { class: 'cat-badge-mung', name: '멍뭉이' },
     '캉': { class: 'cat-badge-kang', name: '캉이' },
@@ -752,10 +758,7 @@
     }
 
     try {
-      // 일정 데이터만 요청합니다. 공휴일 조회는 하지 않습니다.
-      const eventsResponse = await fetch(
-        `${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`
-      );
+      const eventsResponse = await fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`);
       const data = await eventsResponse.json();
 
       const fetchedList = data.events || data.이벤트 || [];
@@ -884,7 +887,6 @@
       cell.className = 'calendar-cell';
       cell.addEventListener('click', () => openDayModal(dateStr));
 
-      // 날짜 색상은 요일만 기준으로 지정합니다.
       let colorStyle = 'var(--weekday-color)';
       if (dayOfWeek === 0) {
         colorStyle = 'var(--sunday-color)';
@@ -981,7 +983,8 @@
     selectedFormDate = selectedEvent.date;
     updateFormDateDisplay();
 
-    const selectedCategory = ['멍', '멍뭉이'].includes(selectedEvent.category) ? '멍뭉이'
+    const selectedCategory = selectedEvent.category === '공통' ? '공통'
+      : ['멍', '멍뭉이'].includes(selectedEvent.category) ? '멍뭉이'
       : ['캉', '캉이'].includes(selectedEvent.category) ? '캉이'
       : ['싱', '싱이'].includes(selectedEvent.category) ? '싱이'
       : '☆';
