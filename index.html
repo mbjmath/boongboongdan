@@ -957,13 +957,29 @@
       cell.className = 'calendar-cell';
       cell.addEventListener('click', () => openDayModal(dateStr));
 
-      let colorStyle = 'var(--weekday-color)';
-      const isHoliday = Object.prototype.hasOwnProperty.call(holidays, dateStr);
-      if (dayOfWeek === 0 || isHoliday) {
-        colorStyle = 'var(--sunday-color)';
-      } else if (dayOfWeek === 6) {
-        colorStyle = 'var(--saturday-color)';
-      }
+      const nonHolidayDates = new Set([
+  '12-31', // 12월 31일
+  '04-05', // 식목일
+  '05-08', // 어버이날
+  '05-15', // 스승의 날
+  '10-01'  // 국군의 날
+]);
+
+const monthDay = dateStr.substring(5);
+let colorStyle = 'var(--weekday-color)';
+
+// 일요일은 무조건 빨간색
+if (dayOfWeek === 0) {
+  colorStyle = 'var(--sunday-color)';
+}
+// 토요일은 무조건 파란색
+else if (dayOfWeek === 6) {
+  colorStyle = 'var(--saturday-color)';
+}
+// 평일은 실제 공휴일만 빨간색으로 표시
+else if (holidays[dateStr] && !nonHolidayDates.has(monthDay)) {
+  colorStyle = 'var(--sunday-color)';
+}
 
       const todayClass = isToday ? 'is-today' : '';
       let holidayTitle = isHoliday && holidays[dateStr] ? ` title="${String(holidays[dateStr]).replace(/"/g, '&quot;')}"` : '';
