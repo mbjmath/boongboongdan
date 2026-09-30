@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>붕붕단 캘린더 </title>
+  <title>붕붕단 캘린더</title>
   <style>
     :root {
       --primary-color: #2e7d32;
@@ -546,8 +546,8 @@
         <label>카테고리</label>
         <div class="radio-group" style="flex-direction: row; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
           <label class="radio-label">
-            <input type="radio" name="category" value="☆" checked>
-            <span class="cat-badge cat-badge-star">☆</span>
+            <input type="radio" name="category" value="휴일" checked>
+            <span class="cat-badge cat-badge-star">휴일</span>
           </label>
           <label class="radio-label">
             <input type="radio" name="category" value="공통">
@@ -657,10 +657,11 @@
   let pickerMonth = currentMonth;
   let selectedFormDate = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  const categories = ['☆', '공통', '멍뭉이', '캉이', '싱이'];
+  const categories = ['휴일', '공통', '멍뭉이', '캉이', '싱이'];
 
   const catConfig = {
-    '☆': { class: 'cat-badge-star', name: '☆' },
+    '휴일': { class: 'cat-badge-star', name: '휴일' },
+    '☆': { class: 'cat-badge-star', name: '휴일' },
     '공통': { class: 'cat-badge-common', name: '공통' },
     '멍': { class: 'cat-badge-mung', name: '멍뭉이' },
     '멍뭉이': { class: 'cat-badge-mung', name: '멍뭉이' },
@@ -671,7 +672,7 @@
   };
 
   function getCatBadgeHtml(cat) {
-    const config = catConfig[cat] || { class: 'cat-badge-star', name: cat ? cat.charAt(0) : '☆' };
+    const config = catConfig[cat] || { class: 'cat-badge-star', name: cat || '휴일' };
     return `<span class="cat-badge ${config.class}">${config.name}</span>`;
   }
 
@@ -770,7 +771,7 @@
       eventsData = fetchedList.map(item => ({
         id: item.id || item.ID,
         date: item.date || item.Date,
-        category: item.category || item.Category || '☆',
+        category: item.category || item.Category || '휴일',
         content: item.content || item.Content || ''
       }));
 
@@ -964,7 +965,7 @@
     document.getElementById('form-title').textContent = '일정 입력';
     selectedFormDate = targetDate || `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     updateFormDateDisplay();
-    document.querySelector('input[name="category"][value="☆"]').checked = true;
+    document.querySelector('input[name="category"][value="휴일"]').checked = true;
     document.getElementById('event-content-input').value = '';
     show('form-screen');
   }
@@ -992,7 +993,7 @@
       : ['멍', '멍뭉이'].includes(selectedEvent.category) ? '멍뭉이'
       : ['캉', '캉이'].includes(selectedEvent.category) ? '캉이'
       : ['싱', '싱이'].includes(selectedEvent.category) ? '싱이'
-      : '☆';
+      : '휴일';
     const radio = document.querySelector(`input[name="category"][value="${selectedCategory}"]`);
     if (radio) radio.checked = true;
 
