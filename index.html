@@ -1074,7 +1074,7 @@
     if (dayEvents.length === 0) {
       listContainer.innerHTML = `<div style="text-align: center; color: #888; padding: 20px 0; font-size: 0.95rem;">등록된 일정이 없습니다.</div>`;
     } else {
-      // 📌 요구사항 2: 휴일 → 공통 → 멍뭉이 → 캉이 → 싱이 순으로 정렬
+      // 카테고리 정렬 순서 적용 (휴일 → 공통 → 멍뭉이 → 캉이 → 싱이)
       dayEvents.sort((a, b) => {
         const orderA = categoryPriority[a.category] ?? 99;
         const orderB = categoryPriority[b.category] ?? 99;
@@ -1085,7 +1085,6 @@
         const item = document.createElement('div');
         item.style.cssText = 'display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; transition: background-color 0.2s;';
         
-        // 📌 요구사항 2: '멍뭉이' 기준 고정 너비(cat-badge-aligned)로 정렬하여 글자 시작 위치를 완벽히 정렬
         item.innerHTML = `
           ${getCatBadgeHtml(ev.category, true)}
           <span style="flex: 1; min-width: 0; font-size: 0.95rem; font-weight: 500; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(ev.content)}</span>
@@ -1110,7 +1109,6 @@
   function renderScheduleList() {
     const selectedCat = document.querySelector('input[name="schedule-category-filter"]:checked')?.value || '휴일';
     
-    // 📌 요구사항 1: 하단 버튼을 현재 선택된 카테고리에 맞춰 "OO 일정 추가"로 동적 텍스트 변경
     const addBtn = document.getElementById('schedule-list-add-btn');
     if (addBtn) {
       addBtn.textContent = `＋ ${selectedCat} 일정 추가`;
@@ -1351,10 +1349,21 @@
     document.getElementById('selected-date-text').textContent = formatDateKR(selectedFormDate);
   }
 
+  // 날짜 클릭 팝업, 일정 상세, 일정 입력 화면에서 사용할 요일이 포함된 날짜 문자열 반환 함수
   function formatDateKR(dateStr) {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
-    return `${parts[0]}년 ${parseInt(parts[1])}월 ${parseInt(parts[2])}일`;
+    if (parts.length < 3) return dateStr;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    
+    // 요일 구하기
+    const d = new Date(year, month - 1, day);
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayName = dayNames[d.getDay()];
+
+    return `${year}년 ${month}월 ${day}일 (${dayName})`;
   }
 
   function formatDateShortKR(dateStr) {
