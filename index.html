@@ -441,8 +441,8 @@
 
     .schedule-list-item { 
       display: flex; 
-      align-items: flex-start; 
-      gap: 12px; 
+      align-items: center; 
+      gap: 10px; 
       background: #f8f9fa; 
       padding: 12px; 
       border-radius: 8px; 
@@ -458,10 +458,9 @@
       font-size: .88rem; 
       font-weight: bold; 
       color: var(--primary-dark); 
-      padding-top: 1px; 
-      width: 110px;
-      min-width: 110px;
-      flex: 0 0 110px;
+      width: 100px;
+      min-width: 100px;
+      flex: 0 0 100px;
     }
     
     .schedule-list-content { 
@@ -1116,7 +1115,7 @@
 
     const monthTitle = document.getElementById('schedule-list-month-title');
     if (monthTitle) {
-      monthTitle.textContent = `${currentYear}년 ${currentMonth}월`;
+      monthTitle.textContent = `${currentYear}년 ${currentMonth}월 일정 목록`;
     }
 
     const listContainer = document.getElementById('schedule-list-items');
@@ -1141,6 +1140,7 @@
       const item = document.createElement('div');
       item.className = 'schedule-list-item';
       item.innerHTML = `
+        ${getCatBadgeHtml(ev.category, true)}
         <div class="schedule-list-date">${formatDateShortKR(ev.date)}</div>
         <div class="schedule-list-content">${escapeHtml(ev.content)}</div>
       `;
