@@ -174,7 +174,7 @@
       border-top: 1px solid var(--border-color);
       flex-grow: 1;
       background-color: #ffffff;
-      overflow: hidden;
+      overflow: hidden;      touch-action: pan-y;
     }
 
     .calendar-cell {
@@ -853,6 +853,38 @@
 
     document.getElementById('prev-month-btn').addEventListener('click', () => moveMainMonth(-1));
     document.getElementById('next-month-btn').addEventListener('click', () => moveMainMonth(1));
+
+    // 모바일 캘린더 좌우 스와이프로 이전/다음 달 이동
+    const calendarGrid = document.getElementById('calendar-grid');
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    calendarGrid.addEventListener('touchstart', (e) => {
+      if (!e.touches.length) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    calendarGrid.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+
+      // 세로 스크롤이나 짧은 움직임은 스와이프로 처리하지 않음
+      if (Math.abs(deltaX) < 60) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+      if (deltaX < 0) {
+        // 왼쪽으로 스와이프 → 다음 달
+        moveMainMonth(1);
+      } else {
+        // 오른쪽으로 스와이프 → 이전 달
+        moveMainMonth(-1);
+      }
+    }, { passive: true });
 
     document.getElementById('open-schedule-list-btn').addEventListener('click', openScheduleList);
     document.getElementById('close-schedule-list-btn').addEventListener('click', () => hide('schedule-list-screen'));
