@@ -786,6 +786,19 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
+
+// DEBUG: Firebase configuration / auth diagnostics
+window.firebaseDebugInfo = function() {
+  return {
+    firebaseProjectId: firebase.app().options.projectId,
+    authDomain: firebase.app().options.authDomain,
+    appId: firebase.app().options.appId,
+    origin: location.origin,
+    href: location.href,
+    authCurrentUser: firebase.auth().currentUser ? firebase.auth().currentUser.email : null
+  };
+};
+console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
   const googleProvider = new firebase.auth.GoogleAuthProvider();
 
   const EDITOR_EMAILS = [
