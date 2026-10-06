@@ -582,13 +582,30 @@
       font-size: 1rem;
     }
 
-    #auth-btn {
+    #admin-btn {
       white-space: nowrap;
     }
+
+    #admin-modal .modal-content {
+      max-width: 340px;
+    }
+
+    #admin-password-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-top: 8px;
+    }
+
+    #admin-status {
+      font-size: 0.82rem;
+      color: #666;
+      margin-top: 6px;
+    }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -612,7 +629,7 @@
       <select id="month-select"></select>
       <button class="btn btn-month-nav" id="next-month-btn" title="다음달">›</button>
       <button class="btn btn-add" id="open-schedule-list-btn">일정</button>
-      <button class="btn btn-add" id="auth-btn">로그인</button>
+      <button class="btn btn-add" id="admin-btn">관리자</button>
     </div>
   </header>
 
@@ -759,6 +776,22 @@
     </div>
   </div>
 
+  <!-- 관리자 모드 모달 -->
+  <div id="admin-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">관리자 모드</div>
+      <div class="modal-body">
+        <label for="admin-password-input">관리자 비밀번호</label>
+        <input type="password" id="admin-password-input" autocomplete="current-password" placeholder="비밀번호를 입력하세요">
+        <div id="admin-status">일정 추가·수정·삭제를 위해 필요합니다.</div>
+      </div>
+      <div class="alert-actions">
+        <button class="btn btn-secondary" id="cancel-admin-btn">취소</button>
+        <button class="btn btn-primary" id="confirm-admin-btn">관리자 모드</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 삭제 확인 모달 -->
   <div id="delete-alert-modal" class="alert-modal hidden">
     <div class="alert-card">
@@ -774,110 +807,99 @@
 </div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyC3p2DyhuClV8EQAiJQOOQ1W0URA-6c",
-    authDomain: "bbd-clnder.firebaseapp.com",
-    projectId: "bbd-clnder",
-    storageBucket: "bbd-clnder.firebasestorage.app",
-    messagingSenderId: "1011800922449",
-    appId: "1:1011800922449:web:5b0d527af24f8cf5721b70"
-  };
+  // Firebase 클라이언트 SDK는 사용하지 않습니다.
+  // 모든 Firestore 접근은 Vercel /api/events 서버를 통해 처리합니다.
+  // 따라서 브라우저에 Firebase API Key나 서비스 계정 정보를 넣지 않습니다.
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+  let adminMode = sessionStorage.getItem('bbd_admin_mode') === 'true';
+  let adminPassword = sessionStorage.getItem('bbd_admin_password') || '';
 
-// DEBUG: Firebase configuration / auth diagnostics
-window.firebaseDebugInfo = function() {
-  return {
-    firebaseProjectId: firebase.app().options.projectId,
-    authDomain: firebase.app().options.authDomain,
-    appId: firebase.app().options.appId,
-    origin: location.origin,
-    href: location.href,
-    authCurrentUser: firebase.auth().currentUser ? firebase.auth().currentUser.email : null
-  };
-};
-console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
-  const googleProvider = new firebase.auth.GoogleAuthProvider();
-
-  const EDITOR_EMAILS = [
-    'mbjmath@gmail.com',
-    'bestmins57@gmail.com'
-  ];
-
-  let currentUser = null;
-
-  function isEditor() {
-    return !!currentUser &&
-      EDITOR_EMAILS.includes((currentUser.email || '').toLowerCase());
+  function updateAdminUI() {
+    const btn = document.getElementById('admin-btn');
+    if (!btn) return;
+    if (adminMode && adminPassword) {
+      btn.textContent = '관리자 종료';
+      btn.title = '관리자 모드를 종료합니다.';
+    } else {
+      btn.textContent = '관리자';
+      btn.title = '관리자 모드로 전환합니다.';
+    }
   }
 
-  async function ensureEditorLogin() {
-    if (isEditor()) return true;
+  function openAdminModal() {
+    if (adminMode && adminPassword) {
+      adminMode = false;
+      adminPassword = '';
+      sessionStorage.removeItem('bbd_admin_mode');
+      sessionStorage.removeItem('bbd_admin_password');
+      updateAdminUI();
+      showToast('관리자 모드를 종료했습니다.');
+      return;
+    }
+
+    document.getElementById('admin-password-input').value = '';
+    document.getElementById('admin-status').textContent = '일정 추가·수정·삭제를 위해 필요합니다.';
+    show('admin-modal');
+    setTimeout(() => document.getElementById('admin-password-input').focus(), 50);
+  }
+
+  function closeAdminModal() {
+    hide('admin-modal');
+  }
+
+  async function enableAdminMode() {
+    const password = document.getElementById('admin-password-input').value;
+    if (!password) {
+      document.getElementById('admin-status').textContent = '비밀번호를 입력해주세요.';
+      return;
+    }
+
+    const btn = document.getElementById('confirm-admin-btn');
+    btn.disabled = true;
+    btn.textContent = '확인 중...';
 
     try {
-      await auth.signInWithPopup(googleProvider);
+      // 실제 서버에서 비밀번호를 확인합니다.
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-password': password
+        },
+        body: JSON.stringify({ action: 'verify' })
+      });
 
-      if (!isEditor()) {
-        await auth.signOut();
-        showToast('허용되지 않은 계정입니다.');
-        return false;
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || '비밀번호가 올바르지 않습니다.');
       }
 
-      updateAuthUI();
-      return true;
+      adminMode = true;
+      adminPassword = password;
+      sessionStorage.setItem('bbd_admin_mode', 'true');
+      sessionStorage.setItem('bbd_admin_password', password);
+      updateAdminUI();
+      closeAdminModal();
+      showToast('관리자 모드로 전환했습니다.');
     } catch (error) {
-      console.error('Google 로그인 오류:', error);
-
-      if (error.code === 'auth/popup-closed-by-user') {
-        return false;
-      }
-
-      const code = error?.code || 'unknown';
-      const message = error?.message || '알 수 없는 오류';
-      showToast(`로그인 실패 [${code}]`);
-      alert(`Google 로그인 실패
-
-오류 코드: ${code}
-오류 메시지: ${message}`);
-      return false;
+      console.error('Admin mode error:', error);
+      document.getElementById('admin-status').textContent = error.message || '관리자 인증에 실패했습니다.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '관리자 모드';
     }
   }
 
-  function updateAuthUI() {
-    const btn = document.getElementById('auth-btn');
-    if (!btn) return;
-
-    if (isEditor()) {
-      btn.textContent = '로그아웃';
-      btn.title = currentUser.email || '';
-    } else {
-      btn.textContent = '로그인';
-      btn.title = 'Google 계정으로 로그인';
+  function getAdminHeaders() {
+    if (!adminMode || !adminPassword) {
+      throw new Error('관리자 모드가 필요합니다.');
     }
+    return {
+      'Content-Type': 'application/json',
+      'x-admin-password': adminPassword
+    };
   }
-
-  async function handleAuthButton() {
-    if (isEditor()) {
-      await auth.signOut();
-      showToast('로그아웃했습니다.');
-    } else {
-      await ensureEditorLogin();
-    }
-
-    updateAuthUI();
-  }
-
-  auth.onAuthStateChanged((user) => {
-    currentUser = user;
-    updateAuthUI();
-
-    if (user && !isEditor()) {
-      auth.signOut();
-      showToast('허용되지 않은 Google 계정입니다.');
-    }
-  });
 
   const today = new Date();
   let currentYear = today.getFullYear();
@@ -942,8 +964,14 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
 
   document.addEventListener('DOMContentLoaded', () => {
     initSelects();
-    updateStatusBadge('syncing', 'Firebase 연결 중...');
-    document.getElementById('auth-btn').addEventListener('click', handleAuthButton);
+    updateStatusBadge('syncing', '서버 연결 중...');
+    updateAdminUI();
+    document.getElementById('admin-btn').addEventListener('click', openAdminModal);
+    document.getElementById('cancel-admin-btn').addEventListener('click', closeAdminModal);
+    document.getElementById('confirm-admin-btn').addEventListener('click', enableAdminMode);
+    document.getElementById('admin-password-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') enableAdminMode();
+    });
     fetchEvents();
 
     document.getElementById('year-select').addEventListener('change', (e) => {
@@ -1003,26 +1031,20 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
       eventsData = cachedList;
       renderCalendar();
       hasCache = true;
-      updateStatusBadge('syncing', 'Firebase 동기화 중...');
+      updateStatusBadge('syncing', '서버 동기화 중...');
     } else {
       showLoading(true, '데이터를 불러오는 중...');
-      updateStatusBadge('syncing', 'Firebase 동기화 중...');
+      updateStatusBadge('syncing', '서버 동기화 중...');
     }
 
     try {
-      const snapshot = await db.collection('events').get();
-      const fetchedList = [];
+      const response = await fetch('/api/events');
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error || '데이터를 불러오지 못했습니다.');
+      }
 
-      snapshot.forEach((doc) => {
-        const data = doc.data() || {};
-
-        fetchedList.push({
-          id: doc.id,
-          date: data.date || '',
-          category: data.category || '휴일',
-          content: data.content || ''
-        });
-      });
+      const fetchedList = Array.isArray(result.events) ? result.events : [];
 
       const targetPrefix =
         `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
@@ -1038,7 +1060,7 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
         renderScheduleList();
       }
 
-      updateStatusBadge('success', 'Firebase 연동됨');
+      updateStatusBadge('success', '서버 연동됨');
 
     } catch (error) {
       console.error('fetchEvents Error:', error);
@@ -1047,7 +1069,7 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
         showToast('데이터를 불러오는 도중 오류가 발생했습니다.');
       }
 
-      updateStatusBadge('error', 'Firebase 동기화 실패');
+      updateStatusBadge('error', '서버 동기화 실패');
 
     } finally {
       showLoading(false);
@@ -1108,7 +1130,7 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
       text.textContent = customText || '연동 중...';
     } else if (status === 'success') {
       icon.textContent = '🟢';
-      text.textContent = customText || 'Firebase 연동됨';
+      text.textContent = customText || '서버 연동됨';
     } else if (status === 'error') {
       icon.textContent = '🔴';
       text.textContent = customText || '연동 오류';
@@ -1317,7 +1339,10 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
   }
 
   async function saveEvent() {
-    if (!(await ensureEditorLogin())) return;
+    if (!adminMode || !adminPassword) {
+      openAdminModal();
+      return;
+    }
 
     const category =
       document.querySelector('input[name="category"]:checked').value;
@@ -1341,25 +1366,38 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
         content: content
       };
 
-      if (isEdit) {
-        await db.collection('events')
-          .doc(String(selectedEvent.id))
-          .set(eventData, { merge: true });
+      const response = await fetch('/api/events', {
+        method: isEdit ? 'PATCH' : 'POST',
+        headers: getAdminHeaders(),
+        body: JSON.stringify(
+          isEdit
+            ? { id: String(selectedEvent.id), ...eventData }
+            : eventData
+        )
+      });
 
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) {
+          adminMode = false;
+          adminPassword = '';
+          sessionStorage.removeItem('bbd_admin_mode');
+          sessionStorage.removeItem('bbd_admin_password');
+          updateAdminUI();
+        }
+        throw new Error(result.error || '저장 중 오류가 발생했습니다.');
+      }
+
+      if (isEdit) {
         selectedEvent.date = selectedFormDate;
         selectedEvent.category = category;
         selectedEvent.content = content;
-
         showToast('일정을 수정했습니다.');
-
       } else {
-        const docRef = await db.collection('events').add(eventData);
-
         eventsData.push({
-          id: docRef.id,
+          id: result.id,
           ...eventData
         });
-
         showToast('일정을 추가했습니다.');
       }
 
@@ -1402,7 +1440,10 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
 
   async function confirmDelete() {
     if (!selectedEvent) return;
-    if (!(await ensureEditorLogin())) return;
+    if (!adminMode || !adminPassword) {
+      openAdminModal();
+      return;
+    }
 
     const targetId = selectedEvent.id;
     const targetDate = selectedEvent.date;
@@ -1412,9 +1453,23 @@ console.log('[Firebase DEBUG]', window.firebaseDebugInfo());
     showLoading(true, '삭제 중...');
 
     try {
-      await db.collection('events')
-        .doc(String(targetId))
-        .delete();
+      const response = await fetch('/api/events', {
+        method: 'DELETE',
+        headers: getAdminHeaders(),
+        body: JSON.stringify({ id: String(targetId) })
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) {
+          adminMode = false;
+          adminPassword = '';
+          sessionStorage.removeItem('bbd_admin_mode');
+          sessionStorage.removeItem('bbd_admin_password');
+          updateAdminUI();
+        }
+        throw new Error(result.error || '삭제 중 오류가 발생했습니다.');
+      }
 
       eventsData = eventsData.filter(
         e => String(e.id) !== String(targetId)
