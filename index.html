@@ -174,7 +174,7 @@
       border-top: 1px solid var(--border-color);
       flex-grow: 1;
       background-color: #ffffff;
-      overflow: hidden;      touch-action: pan-y;
+      overflow: hidden;
     }
 
     .calendar-cell {
@@ -581,7 +581,14 @@
     #delete-event-btn {
       font-size: 1rem;
     }
+
+    #auth-btn {
+      white-space: nowrap;
+    }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -605,6 +612,7 @@
       <select id="month-select"></select>
       <button class="btn btn-month-nav" id="next-month-btn" title="다음달">›</button>
       <button class="btn btn-add" id="open-schedule-list-btn">일정</button>
+      <button class="btn btn-add" id="auth-btn">로그인</button>
     </div>
   </header>
 
@@ -766,7 +774,91 @@
 </div>
 
 <script>
-  const API_URL = "https://script.google.com/macros/s/AKfycbwviJybQ8ZDzNb8oPNRtXsWhnnxfzpEN2X4vCM_2vmGvTsFIUenY9bAkwK39Iy8ix07/exec";
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3p2DyhuClV8EQAiJQOOQ1W0URA-6c",
+    authDomain: "bbd-clnder.firebaseapp.com",
+    projectId: "bbd-clnder",
+    storageBucket: "bbd-clnder.firebasestorage.app",
+    messagingSenderId: "1011800922449",
+    appId: "1:1011800922449:web:5b0d527af24f8cf5721b70"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+  const EDITOR_EMAILS = [
+    'mbjmath@gmail.com',
+    'bestmins57@gmail.com'
+  ];
+
+  let currentUser = null;
+
+  function isEditor() {
+    return !!currentUser &&
+      EDITOR_EMAILS.includes((currentUser.email || '').toLowerCase());
+  }
+
+  async function ensureEditorLogin() {
+    if (isEditor()) return true;
+
+    try {
+      await auth.signInWithPopup(googleProvider);
+
+      if (!isEditor()) {
+        await auth.signOut();
+        showToast('허용되지 않은 계정입니다.');
+        return false;
+      }
+
+      updateAuthUI();
+      return true;
+    } catch (error) {
+      console.error('Google 로그인 오류:', error);
+
+      if (error.code === 'auth/popup-closed-by-user') {
+        return false;
+      }
+
+      showToast('Google 로그인에 실패했습니다.');
+      return false;
+    }
+  }
+
+  function updateAuthUI() {
+    const btn = document.getElementById('auth-btn');
+    if (!btn) return;
+
+    if (isEditor()) {
+      btn.textContent = '로그아웃';
+      btn.title = currentUser.email || '';
+    } else {
+      btn.textContent = '로그인';
+      btn.title = 'Google 계정으로 로그인';
+    }
+  }
+
+  async function handleAuthButton() {
+    if (isEditor()) {
+      await auth.signOut();
+      showToast('로그아웃했습니다.');
+    } else {
+      await ensureEditorLogin();
+    }
+
+    updateAuthUI();
+  }
+
+  auth.onAuthStateChanged((user) => {
+    currentUser = user;
+    updateAuthUI();
+
+    if (user && !isEditor()) {
+      auth.signOut();
+      showToast('허용되지 않은 Google 계정입니다.');
+    }
+  });
 
   const today = new Date();
   let currentYear = today.getFullYear();
@@ -831,60 +923,22 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initSelects();
-    updateStatusBadge('idle');
-
-    if (API_URL) {
-      fetchEvents();
-    } else {
-      renderCalendar();
-    }
+    updateStatusBadge('syncing', 'Firebase 연결 중...');
+    document.getElementById('auth-btn').addEventListener('click', handleAuthButton);
+    fetchEvents();
 
     document.getElementById('year-select').addEventListener('change', (e) => {
       currentYear = parseInt(e.target.value);
-      if (API_URL) fetchEvents();
-      else renderCalendar();
+      fetchEvents();
     });
 
     document.getElementById('month-select').addEventListener('change', (e) => {
       currentMonth = parseInt(e.target.value);
-      if (API_URL) fetchEvents();
-      else renderCalendar();
+      fetchEvents();
     });
 
     document.getElementById('prev-month-btn').addEventListener('click', () => moveMainMonth(-1));
     document.getElementById('next-month-btn').addEventListener('click', () => moveMainMonth(1));
-
-    // 모바일 캘린더 좌우 스와이프로 이전/다음 달 이동
-    const calendarGrid = document.getElementById('calendar-grid');
-    let touchStartX = 0;
-    let touchStartY = 0;
-
-    calendarGrid.addEventListener('touchstart', (e) => {
-      if (!e.touches.length) return;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    calendarGrid.addEventListener('touchend', (e) => {
-      if (!e.changedTouches.length) return;
-
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
-      const deltaX = touchEndX - touchStartX;
-      const deltaY = touchEndY - touchStartY;
-
-      // 세로 스크롤이나 짧은 움직임은 스와이프로 처리하지 않음
-      if (Math.abs(deltaX) < 60) return;
-      if (Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
-
-      if (deltaX < 0) {
-        // 왼쪽으로 스와이프 → 다음 달
-        moveMainMonth(1);
-      } else {
-        // 오른쪽으로 스와이프 → 이전 달
-        moveMainMonth(-1);
-      }
-    }, { passive: true });
 
     document.getElementById('open-schedule-list-btn').addEventListener('click', openScheduleList);
     document.getElementById('close-schedule-list-btn').addEventListener('click', () => hide('schedule-list-screen'));
@@ -930,34 +984,52 @@
       eventsData = cachedList;
       renderCalendar();
       hasCache = true;
-      updateStatusBadge('syncing', '동기화 중...');
+      updateStatusBadge('syncing', 'Firebase 동기화 중...');
     } else {
-      showLoading(true, "데이터를 불러오는 중...");
-      updateStatusBadge('syncing', '동기화 중...');
+      showLoading(true, '데이터를 불러오는 중...');
+      updateStatusBadge('syncing', 'Firebase 동기화 중...');
     }
 
     try {
-      const eventsResponse = await fetch(`${API_URL}?action=getEvents&year=${currentYear}&month=${currentMonth}`);
-      const data = await eventsResponse.json();
+      const snapshot = await db.collection('events').get();
+      const fetchedList = [];
 
-      const fetchedList = data.events || data.이벤트 || [];
-      eventsData = fetchedList.map(item => ({
-        id: item.id || item.ID,
-        date: item.date || item.Date,
-        category: item.category || item.Category || '휴일',
-        content: item.content || item.Content || ''
-      }));
+      snapshot.forEach((doc) => {
+        const data = doc.data() || {};
+
+        fetchedList.push({
+          id: doc.id,
+          date: data.date || '',
+          category: data.category || '휴일',
+          content: data.content || ''
+        });
+      });
+
+      const targetPrefix =
+        `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+
+      eventsData = fetchedList.filter(item =>
+        item.date.startsWith(targetPrefix)
+      );
 
       setCachedEvents(currentYear, currentMonth, eventsData);
       renderCalendar();
-      if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) renderScheduleList();
-      updateStatusBadge('success', '구글시트 연동됨');
-    } catch (error) {
-      console.error("fetchEvents Error:", error);
-      if (!hasCache) {
-        showToast("데이터를 불러오는 도중 오류가 발생했습니다.");
+
+      if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) {
+        renderScheduleList();
       }
-      updateStatusBadge('error', '동기화 실패');
+
+      updateStatusBadge('success', 'Firebase 연동됨');
+
+    } catch (error) {
+      console.error('fetchEvents Error:', error);
+
+      if (!hasCache) {
+        showToast('데이터를 불러오는 도중 오류가 발생했습니다.');
+      }
+
+      updateStatusBadge('error', 'Firebase 동기화 실패');
+
     } finally {
       showLoading(false);
     }
@@ -978,8 +1050,7 @@
       document.getElementById('month-select').value = String(currentMonth);
     }
 
-    if (API_URL) fetchEvents();
-    else renderCalendar();
+    fetchEvents();
   }
 
   function initSelects() {
@@ -1018,7 +1089,7 @@
       text.textContent = customText || '연동 중...';
     } else if (status === 'success') {
       icon.textContent = '🟢';
-      text.textContent = customText || '구글시트 연동됨';
+      text.textContent = customText || 'Firebase 연동됨';
     } else if (status === 'error') {
       icon.textContent = '🔴';
       text.textContent = customText || '연동 오류';
@@ -1227,8 +1298,12 @@
   }
 
   async function saveEvent() {
-    const category = document.querySelector('input[name="category"]:checked').value;
-    const content = document.getElementById('event-content-input').value.trim();
+    if (!(await ensureEditorLogin())) return;
+
+    const category =
+      document.querySelector('input[name="category"]:checked').value;
+    const content =
+      document.getElementById('event-content-input').value.trim();
 
     if (!content) {
       showToast('일정 내용을 입력해주세요.');
@@ -1236,49 +1311,65 @@
     }
 
     const isEdit = !!selectedEvent;
+
     hide('form-screen');
-    showLoading(true, isEdit ? "수정 중..." : "저장 중...");
+    showLoading(true, isEdit ? '수정 중...' : '저장 중...');
 
     try {
-      if (API_URL) {
-        const action = isEdit ? 'updateEvent' : 'addEvent';
-        const payload = {
-          action: action,
-          id: selectedEvent ? selectedEvent.id : undefined,
-          date: selectedFormDate,
-          category: category,
-          content: content
-        };
+      const eventData = {
+        date: selectedFormDate,
+        category: category,
+        content: content
+      };
 
-        await fetch(API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+      if (isEdit) {
+        await db.collection('events')
+          .doc(String(selectedEvent.id))
+          .set(eventData, { merge: true });
+
+        selectedEvent.date = selectedFormDate;
+        selectedEvent.category = category;
+        selectedEvent.content = content;
+
+        showToast('일정을 수정했습니다.');
+
+      } else {
+        const docRef = await db.collection('events').add(eventData);
+
+        eventsData.push({
+          id: docRef.id,
+          ...eventData
         });
 
-        // Optimistic Local Update
-        if (isEdit) {
-          selectedEvent.date = selectedFormDate;
-          selectedEvent.category = category;
-          selectedEvent.content = content;
-        } else {
-          eventsData.push({
-            id: 'TEMP_' + Date.now(),
-            date: selectedFormDate,
-            category: category,
-            content: content
-          });
-        }
-
-        setCachedEvents(currentYear, currentMonth, eventsData);
-        renderCalendar();
-        showToast(isEdit ? '일정을 수정했습니다.' : '일정을 추가했습니다.');
-        setTimeout(fetchEvents, 1200);
+        showToast('일정을 추가했습니다.');
       }
-    } catch (e) {
-      console.error("Save Error:", e);
+
+      const cacheYear =
+        parseInt(selectedFormDate.split('-')[0], 10);
+      const cacheMonth =
+        parseInt(selectedFormDate.split('-')[1], 10);
+
+      setCachedEvents(
+        cacheYear,
+        cacheMonth,
+        eventsData.filter(e =>
+          e.date.startsWith(
+            `${cacheYear}-${String(cacheMonth).padStart(2, '0')}`
+          )
+        )
+      );
+
+      renderCalendar();
+
+      if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) {
+        renderScheduleList();
+      }
+
+    } catch (error) {
+      console.error('Save Error:', error);
       showToast('저장 중 오류가 발생했습니다.');
+      await fetchEvents();
+
     } finally {
       showLoading(false);
     }
@@ -1292,30 +1383,49 @@
 
   async function confirmDelete() {
     if (!selectedEvent) return;
+    if (!(await ensureEditorLogin())) return;
+
     const targetId = selectedEvent.id;
+    const targetDate = selectedEvent.date;
 
     hide('delete-alert-modal');
     hide('detail-screen');
-    showLoading(true, "삭제 중...");
+    showLoading(true, '삭제 중...');
 
     try {
-      if (API_URL) {
-        await fetch(API_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'deleteEvent', id: targetId })
-        });
+      await db.collection('events')
+        .doc(String(targetId))
+        .delete();
 
-        eventsData = eventsData.filter(e => String(e.id) !== String(targetId));
-        setCachedEvents(currentYear, currentMonth, eventsData);
-        renderCalendar();
-        showToast('일정을 삭제했습니다.');
-        setTimeout(fetchEvents, 1200);
+      eventsData = eventsData.filter(
+        e => String(e.id) !== String(targetId)
+      );
+
+      const [eYear, eMonth] = targetDate.split('-').map(Number);
+
+      setCachedEvents(
+        eYear,
+        eMonth,
+        eventsData.filter(e =>
+          e.date.startsWith(
+            `${eYear}-${String(eMonth).padStart(2, '0')}`
+          )
+        )
+      );
+
+      renderCalendar();
+
+      if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) {
+        renderScheduleList();
       }
-    } catch (e) {
-      console.error("Delete Error:", e);
+
+      showToast('일정을 삭제했습니다.');
+
+    } catch (error) {
+      console.error('Delete Error:', error);
       showToast('삭제 중 오류가 발생했습니다.');
+      await fetchEvents();
+
     } finally {
       showLoading(false);
     }
