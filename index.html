@@ -6,8 +6,8 @@
   <title>붕붕단 캘린더</title>
   <style>
     :root {
-      --primary-color: #2e7d32;
-      --primary-dark: #1b5e20;
+      --primary-color: #4f46e5;
+      --primary-dark: #3730a3;
       --bg-color: #f8f9fa;
       --border-color: #e0e0e0;
       --text-color: #333333;
@@ -24,7 +24,7 @@
     }
 
     body {
-      background-color: #eef2f5;
+      background-color: #f3f4f6;
       color: var(--text-color);
       display: flex;
       justify-content: center;
@@ -192,7 +192,7 @@
     }
 
     .calendar-cell:hover {
-      background-color: #f4f8f5;
+      background-color: #f5f7ff;
     }
 
     .calendar-cell.other-month {
@@ -271,8 +271,8 @@
       justify-content: center;
       font-size: 0.72rem;
       font-weight: bold;
-      color: #ffffff;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      color: #1f2937;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
       flex-shrink: 0;
       padding: 0 4px;
       white-space: nowrap;
@@ -287,11 +287,11 @@
       flex-shrink: 0;
     }
 
-    .cat-badge-star { background-color: #ef4444; }
-    .cat-badge-common { background-color: #16a34a; }
-    .cat-badge-mung { background-color: #3b82f6; }
-    .cat-badge-kang { background-color: #ec4899; }
-    .cat-badge-sing { background-color: #eab308; color: #ffffff; }
+    .cat-badge-star { background-color: #fecdd3; }
+    .cat-badge-common { background-color: #bbf7d0; }
+    .cat-badge-mung { background-color: #bfdbfe; }
+    .cat-badge-kang { background-color: #ffd0a6; color: #000000; }
+    .cat-badge-sing { background-color: #fef3c7; color: #1f2937; }
 
     /* 풀스크린 화면 */
     .view-screen {
@@ -374,7 +374,7 @@
       flex-direction: row;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 0;
       background: #f9f9f9;
       padding: 12px;
       border-radius: 6px;
@@ -438,6 +438,40 @@
       width: auto !important; 
       min-width: 0; 
       flex: 0 0 auto; 
+    }
+
+    .schedule-list-screen .screen-body {
+      background: #ffffff;
+      touch-action: pan-y;
+    }
+
+    .schedule-month-nav {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      padding: 2px 0 4px;
+    }
+
+    .schedule-month-nav button {
+      min-width: 48px;
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--primary-color);
+      font-size: 1.25rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .schedule-month-nav-title {
+      flex: 0 0 auto;
+      text-align: left;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #374151;
+      white-space: nowrap;
     }
 
     .schedule-list-item { 
@@ -683,7 +717,9 @@
     </div>
     <div class="screen-body">
       <div class="form-group">
-        <label id="schedule-list-month-title">조회 월</label>
+        <div class="schedule-month-nav">
+          <div class="schedule-month-nav-title" id="schedule-list-month-title">조회 월</div>
+        </div>
         <div class="schedule-filter-group">
           <label class="schedule-filter-label"><input type="radio" name="schedule-category-filter" value="휴일" checked><span class="cat-badge cat-badge-star">휴일</span></label>
           <label class="schedule-filter-label"><input type="radio" name="schedule-category-filter" value="공통"><span class="cat-badge cat-badge-common">공통</span></label>
@@ -746,7 +782,7 @@
   <div id="day-events-modal" class="alert-modal hidden">
     <div class="alert-card" style="text-align: left; max-width: 360px; width: 90%;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-        <h3 id="day-modal-title" style="font-size: 1.1rem; color: #2e7d32; font-weight: bold;">날짜 일정</h3>
+        <h3 id="day-modal-title" style="font-size: 1.1rem; color: #3730a3; font-weight: bold;">날짜 일정</h3>
         <button class="btn btn-secondary" id="close-day-modal-btn" style="padding: 4px 8px; font-size: 0.85rem;">✕</button>
       </div>
       <div id="day-modal-event-list" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
@@ -821,6 +857,10 @@
   }
 
   let eventsData = [];
+  let scheduleEventsData = [];
+  let scheduleListYear = currentYear;
+  let scheduleListMonth = currentMonth;
+  let scheduleFetchToken = 0;
 
   function getCacheKey(year, month) {
     return `calendar_events_${year}_${String(month).padStart(2, '0')}`;
@@ -873,13 +913,17 @@
     document.getElementById('schedule-list-add-btn').addEventListener('click', () => {
       const selectedCat = document.querySelector('input[name="schedule-category-filter"]:checked')?.value || '휴일';
       hide('schedule-list-screen');
-      openAddForm(null, selectedCat);
+      const targetDate = `${scheduleListYear}-${String(scheduleListMonth).padStart(2, '0')}-01`;
+      openAddForm(targetDate, selectedCat);
     });
 
     document.getElementById('close-form-btn').addEventListener('click', () => hide('form-screen'));
     document.getElementById('close-detail-btn').addEventListener('click', () => hide('detail-screen'));
     
     document.getElementById('close-day-modal-btn').addEventListener('click', () => hide('day-events-modal'));
+    document.getElementById('day-events-modal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) hide('day-events-modal');
+    });
     document.getElementById('day-modal-add-btn').addEventListener('click', () => {
       hide('day-events-modal');
       openAddForm(selectedDayDate);
@@ -929,8 +973,42 @@
     swipeTracking = false;
   }, { passive: true });
 
+  // 일정 확인 화면의 가운데 흰색 영역 전체에서 좌우 스와이프로 월 이동
+  // 상단의 '← 일정 확인' 헤더와 하단의 '＋ 일정 추가' 영역은 스와이프 대상에서 제외
+  let scheduleSwipeStartX = 0;
+  let scheduleSwipeStartY = 0;
+  let scheduleSwipeTracking = false;
+  const scheduleSwipeArea = document.querySelector('#schedule-list-screen .screen-body');
+
+  scheduleSwipeArea.addEventListener('touchstart', (e) => {
+    if (!e.touches || e.touches.length !== 1) return;
+    scheduleSwipeStartX = e.touches[0].clientX;
+    scheduleSwipeStartY = e.touches[0].clientY;
+    scheduleSwipeTracking = true;
+  }, { passive: true });
+
+  scheduleSwipeArea.addEventListener('touchend', (e) => {
+    if (!scheduleSwipeTracking || !e.changedTouches || e.changedTouches.length !== 1) return;
+    scheduleSwipeTracking = false;
+
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - scheduleSwipeStartX;
+    const dy = endY - scheduleSwipeStartY;
+
+    if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      moveScheduleListMonth(dx < 0 ? 1 : -1);
+    }
+  }, { passive: true });
+
+  scheduleSwipeArea.addEventListener('touchcancel', () => {
+    scheduleSwipeTracking = false;
+  }, { passive: true });
+
   async function fetchEvents() {
-    const cachedList = getCachedEvents(currentYear, currentMonth);
+    const year = currentYear;
+    const month = currentMonth;
+    const cachedList = getCachedEvents(year, month);
     let hasCache = false;
 
     if (cachedList && Array.isArray(cachedList)) {
@@ -944,48 +1022,87 @@
     }
 
     try {
-      const snapshot = await db.collection('events').get();
-      const fetchedList = [];
-
-      snapshot.forEach((doc) => {
-        const data = doc.data() || {};
-
-        fetchedList.push({
-          id: doc.id,
-          date: data.date || '',
-          category: data.category || '휴일',
-          content: data.content || ''
-        });
-      });
-
-      const targetPrefix =
-        `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-
-      eventsData = fetchedList.filter(item =>
-        item.date.startsWith(targetPrefix)
-      );
-
-      setCachedEvents(currentYear, currentMonth, eventsData);
+      eventsData = await queryEventsByMonth(year, month);
+      setCachedEvents(year, month, eventsData);
       renderCalendar();
-
-      if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) {
-        renderScheduleList();
-      }
-
       updateStatusBadge('success', 'Firebase 연동됨');
-
     } catch (error) {
       console.error('fetchEvents Error:', error);
-
       if (!hasCache) {
         showToast('데이터를 불러오는 도중 오류가 발생했습니다.');
       }
-
       updateStatusBadge('error', 'Firebase 동기화 실패');
-
     } finally {
       showLoading(false);
     }
+  }
+
+  // 현재 조회 중인 연/월만 Firestore에서 가져온다.
+  async function queryEventsByMonth(year, month) {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    const snapshot = await db.collection('events')
+      .where('date', '>=', startDate)
+      .where('date', '<=', endDate)
+      .get();
+
+    const fetchedList = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data() || {};
+      fetchedList.push({
+        id: doc.id,
+        date: data.date || '',
+        category: data.category || '휴일',
+        content: data.content || ''
+      });
+    });
+
+    fetchedList.sort((a, b) => a.date.localeCompare(b.date));
+    return fetchedList;
+  }
+
+  async function fetchScheduleEvents() {
+    const year = scheduleListYear;
+    const month = scheduleListMonth;
+    const token = ++scheduleFetchToken;
+    const cachedList = getCachedEvents(year, month);
+
+    if (cachedList && Array.isArray(cachedList)) {
+      scheduleEventsData = cachedList;
+      renderScheduleList();
+    } else {
+      scheduleEventsData = [];
+      renderScheduleList();
+    }
+
+    try {
+      const fetchedList = await queryEventsByMonth(year, month);
+      if (token !== scheduleFetchToken) return;
+      scheduleEventsData = fetchedList;
+      setCachedEvents(year, month, fetchedList);
+      renderScheduleList();
+    } catch (error) {
+      if (token !== scheduleFetchToken) return;
+      console.error('fetchScheduleEvents Error:', error);
+      if (!cachedList) {
+        showToast('해당 월의 일정을 불러오지 못했습니다.');
+      }
+    }
+  }
+
+  function moveScheduleListMonth(delta) {
+    scheduleListMonth += delta;
+    if (scheduleListMonth < 1) {
+      scheduleListMonth = 12;
+      scheduleListYear--;
+    } else if (scheduleListMonth > 12) {
+      scheduleListMonth = 1;
+      scheduleListYear++;
+    }
+    renderScheduleList();
+    fetchScheduleEvents();
   }
 
   function moveMainMonth(delta) {
@@ -1157,13 +1274,16 @@
   }
 
   function openScheduleList() {
+    scheduleListYear = currentYear;
+    scheduleListMonth = currentMonth;
     renderScheduleList();
     show('schedule-list-screen');
+    fetchScheduleEvents();
   }
 
   function renderScheduleList() {
     const selectedCat = document.querySelector('input[name="schedule-category-filter"]:checked')?.value || '휴일';
-    
+
     const addBtn = document.getElementById('schedule-list-add-btn');
     if (addBtn) {
       addBtn.textContent = `＋ ${selectedCat} 일정 추가`;
@@ -1171,21 +1291,21 @@
 
     const monthTitle = document.getElementById('schedule-list-month-title');
     if (monthTitle) {
-      monthTitle.textContent = `${currentYear}년 ${currentMonth}월`;
+      monthTitle.textContent = `${scheduleListYear}년 ${scheduleListMonth}월`;
     }
 
     const listContainer = document.getElementById('schedule-list-items');
     if (!listContainer) return;
 
-    listContainer.innerHTML = '';
-
-    const targetPrefix = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
-    const filteredEvents = eventsData.filter(e => {
+    const targetPrefix = `${scheduleListYear}-${String(scheduleListMonth).padStart(2, '0')}`;
+    const filteredEvents = scheduleEventsData.filter(e => {
       const isCatMatch = e.category === selectedCat || catConfig[e.category]?.name === selectedCat;
       return isCatMatch && e.date.startsWith(targetPrefix);
     });
 
     filteredEvents.sort((a, b) => a.date.localeCompare(b.date));
+
+    listContainer.innerHTML = '';
 
     if (filteredEvents.length === 0) {
       listContainer.innerHTML = `<div class="schedule-empty">${selectedCat} 카테고리에 등록된 일정이 없습니다.</div>`;
@@ -1224,7 +1344,8 @@
   }
 
   function openDetail(id) {
-    selectedEvent = eventsData.find(e => String(e.id) === String(id));
+    selectedEvent = eventsData.find(e => String(e.id) === String(id))
+      || scheduleEventsData.find(e => String(e.id) === String(id));
     if (!selectedEvent) return;
 
     document.getElementById('detail-date').textContent = formatDateKR(selectedEvent.date);
@@ -1295,25 +1416,10 @@
         showToast('일정을 추가했습니다.');
       }
 
-      const cacheYear =
-        parseInt(selectedFormDate.split('-')[0], 10);
-      const cacheMonth =
-        parseInt(selectedFormDate.split('-')[1], 10);
-
-      setCachedEvents(
-        cacheYear,
-        cacheMonth,
-        eventsData.filter(e =>
-          e.date.startsWith(
-            `${cacheYear}-${String(cacheMonth).padStart(2, '0')}`
-          )
-        )
-      );
-
-      renderCalendar();
+      await fetchEvents();
 
       if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) {
-        renderScheduleList();
+        await fetchScheduleEvents();
       }
 
     } catch (error) {
@@ -1346,26 +1452,10 @@
         .doc(String(targetId))
         .delete();
 
-      eventsData = eventsData.filter(
-        e => String(e.id) !== String(targetId)
-      );
-
-      const [eYear, eMonth] = targetDate.split('-').map(Number);
-
-      setCachedEvents(
-        eYear,
-        eMonth,
-        eventsData.filter(e =>
-          e.date.startsWith(
-            `${eYear}-${String(eMonth).padStart(2, '0')}`
-          )
-        )
-      );
-
-      renderCalendar();
+      await fetchEvents();
 
       if (!document.getElementById('schedule-list-screen').classList.contains('hidden')) {
-        renderScheduleList();
+        await fetchScheduleEvents();
       }
 
       showToast('일정을 삭제했습니다.');
