@@ -1202,8 +1202,13 @@
       cell.className = 'calendar-cell';
       cell.addEventListener('click', () => openDayModal(dateStr));
 
+      // 일요일이거나 '휴일' 일정이 등록된 날짜는 빨간색으로 표시
+      const isHoliday = eventsData.some(e =>
+        e.date === dateStr && (e.category === '휴일' || catConfig[e.category]?.name === '휴일')
+      );
+
       let colorStyle = 'var(--weekday-color)';
-      if (dayOfWeek === 0) colorStyle = 'var(--sunday-color)';
+      if (dayOfWeek === 0 || isHoliday) colorStyle = 'var(--sunday-color)';
       else if (dayOfWeek === 6) colorStyle = 'var(--saturday-color)';
 
       const todayClass = isToday ? 'is-today' : '';
