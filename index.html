@@ -680,7 +680,7 @@
   <div id="form-screen" class="view-screen hidden">
     <div class="screen-header">
       <button class="btn-back" id="close-form-btn">←</button>
-      <span id="form-title">일정 입력</span>
+      <span id="form-title">일정 입력하기</span>
     </div>
     <div class="screen-body">
       <div class="form-group">
@@ -721,7 +721,7 @@
       </div>
     </div>
     <div class="screen-footer">
-      <button class="btn btn-primary" id="save-event-btn">일정 저장</button>
+      <button class="btn btn-primary" id="save-event-btn">저장</button>
     </div>
   </div>
 
@@ -759,7 +759,7 @@
   <div id="detail-screen" class="view-screen hidden">
     <div class="screen-header">
       <button class="btn-back" id="close-detail-btn">←</button>
-      <span>일정 상세</span>
+      <span>일정 상세보기</span>
     </div>
     <div class="screen-body">
       <div class="form-group">
@@ -1380,7 +1380,7 @@
     if (!selectedEvent) return;
     hide('detail-screen');
 
-    document.getElementById('form-title').textContent = '일정 수정';
+    document.getElementById('form-title').textContent = '일정 수정하기';
     selectedFormDate = selectedEvent.date;
     updateFormDateDisplay();
 
