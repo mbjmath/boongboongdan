@@ -207,6 +207,8 @@
       text-align: center;
       padding: 1px 0;
       line-height: 1.1;
+      height: 20px;
+      min-height: 20px;
     }
 
     .cell-date.is-today {
@@ -218,6 +220,11 @@
       line-height: 18px;
       margin: 0 auto;
       padding: 0;
+    }
+
+    /* 오늘 날짜의 원 표시와 관계없이 일정 뱃지 위치를 동일하게 유지 */
+    .category-container {
+      margin-top: 2px;
     }
 
     .category-container {
@@ -241,20 +248,24 @@
     }
 
     .cat-badge-wrapper .cat-badge {
-      width: 100%;
+      width: calc(100% - 10px);
+      font-size: 0.65rem;
+      padding: 0 2px;
     }
 
     .cat-badge-count {
       position: absolute;
       top: 50%;
-      right: 2px;
+      right: 0;
       transform: translateY(-50%);
+      width: 10px;
+      height: 10px;
       background: rgba(0, 0, 0, 0.35);
       color: #ffffff;
-      font-size: 0.6rem;
-      border-radius: 6px;
-      padding: 1px 4px;
-      line-height: 1;
+      font-size: 0.5rem;
+      border-radius: 50%;
+      padding: 0;
+      line-height: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
