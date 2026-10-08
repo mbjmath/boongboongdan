@@ -212,15 +212,19 @@
     }
 
     .cell-date.is-today {
-      background-color: var(--primary-color);
-      color: #ffffff !important;
-      border-radius: 50%;
-      width: 16px;
-      height: 16px;
-      line-height: 16px;
-      margin: 0 auto;
-      padding: 0;
-    }
+  background-color: var(--primary-color);
+  color: #ffffff !important;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  line-height: 16px;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
 
     /* 오늘 날짜의 원 표시와 관계없이 일정 뱃지 위치를 동일하게 유지 */
     .category-container {
