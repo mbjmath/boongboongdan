@@ -1351,7 +1351,7 @@
 
   function openAddForm(targetDate, targetCat) {
     selectedEvent = null;
-    document.getElementById('form-title').textContent = '일정 입력';
+    document.getElementById('form-title').textContent = '일정 입력하기';
     selectedFormDate = targetDate || `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     updateFormDateDisplay();
 
