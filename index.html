@@ -212,23 +212,29 @@
     }
 
     .cell-date.is-today {
-  background-color: var(--primary-color);
-  color: #ffffff !important;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  min-width: 16px;
-  min-height: 16px;
-  line-height: 16px;
-  margin: 0 auto;
-  padding: 0;
-  box-sizing: border-box;
-  flex-shrink: 0;
-}
+      position: relative;
+      background-color: transparent;
+      color: #ffffff !important;
+      width: 20px;
+      height: 20px;
+      min-height: 20px;
+      line-height: 20px;
+      margin: 0 auto;
+      padding: 0;
+      z-index: 0;
+    }
 
-    /* 오늘 날짜의 원 표시와 관계없이 일정 뱃지 위치를 동일하게 유지 */
-    .category-container {
-      margin-top: 2px;
+    .cell-date.is-today::before {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background-color: var(--primary-color);
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: -1;
     }
 
     .category-container {
