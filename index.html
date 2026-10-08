@@ -202,26 +202,25 @@
     }
 
     .cell-date {
+      position: relative;
       font-size: 0.8rem;
       font-weight: bold;
       text-align: center;
       padding: 1px 0;
-      line-height: 1.1;
+      line-height: 18px;
       height: 20px;
       min-height: 20px;
+      box-sizing: border-box;
+      flex: 0 0 20px;
+      z-index: 0;
     }
 
     .cell-date.is-today {
-      position: relative;
       background-color: transparent;
       color: #ffffff !important;
-      width: 20px;
-      height: 20px;
-      min-height: 20px;
-      line-height: 20px;
-      margin: 0 auto;
-      padding: 0;
-      z-index: 0;
+      width: auto;
+      margin: 0;
+      padding: 1px 0;
     }
 
     .cell-date.is-today::before {
